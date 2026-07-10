@@ -3,6 +3,10 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<meta name="theme-color" content="#0B0E11">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="ARD Field">
 <title>Advanced Remodel & Design — Daily Field Dashboard</title>
 <link rel="icon" href="data:,">
 <style>
@@ -327,6 +331,7 @@ function(a,b,c){if(!Vd(b))throw Error(n(200));return Wd(null,a,b,!1,c)};Q.unmoun
 
 <script>
 const { useState, useEffect, useRef } = React;
+const APP_VERSION = "v5.1";
 const h = React.createElement;
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -541,18 +546,21 @@ const PROJECTS = [
 // HELPERS
 // ════════════════════════════════════════════════════════════════════════════
 function toDate(str) { return new Date(str + "T00:00:00"); }
+function localDateStr(d) { return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); }
 function fmt(d) { return d.toLocaleDateString("en-US",{weekday:"long",month:"long",day:"numeric",year:"numeric"}); }
 function daysBetween(a,b) { return Math.round((b-a)/(1000*60*60*24)); }
 function getActivePhases(project, today) { return project.phases.filter(p => today >= toDate(p.start) && today < toDate(p.end)); }
 function getUpcomingPhases(project, today, days=7) { const horizon = new Date(today); horizon.setDate(horizon.getDate()+days); return project.phases.filter(p => toDate(p.start) > today && toDate(p.start) <= horizon); }
-function getTodayEvents(project, today) { const ds = today.toISOString().split("T")[0]; return [...project.holds.filter(e=>e.date===ds),...project.procurement.filter(e=>e.date===ds),...project.milestones.filter(e=>e.date===ds)]; }
+function getTodayEvents(project, today) { const ds = localDateStr(today); return [...project.holds.filter(e=>e.date===ds),...project.procurement.filter(e=>e.date===ds),...project.milestones.filter(e=>e.date===ds)]; }
+function getUpcomingEvents(project, today, days) { days=days||7; const ds=localDateStr(today); const horizon=new Date(today); horizon.setDate(horizon.getDate()+days); const hs=localDateStr(horizon); return [].concat(project.holds,project.procurement,project.milestones).filter(function(e){return e.date>ds&&e.date<=hs;}).sort(function(a,b){return a.date<b.date?-1:1;}); }
 function projectProgress(project, today) { const start=toDate(project.startDate),end=toDate(project.endDate); const total=daysBetween(start,end); const elapsed=Math.max(0,Math.min(total,daysBetween(start,today))); return Math.round(elapsed/total*100); }
 
-function buildSystemPrompt(project, today, activePhases, upcomingPhases, events) {
+function buildSystemPrompt(project, today, activePhases, upcomingPhases, events, effSelections) {
   const pct = projectProgress(project, today);
   const intel = PROJECT_INTEL[project.id];
-  const selectionsText = intel ? intel.selections.map(s=>`${s.category} — ${s.item}: ${s.value}`).join("\\n") : "No selections data.";
-  const scopeText = intel ? intel.scopeNotes.map(s=>`${s.area}: ${s.note}`).join("\\n\\n") : "No scope notes.";
+  const selList = effSelections || (intel ? intel.selections : null);
+  const selectionsText = selList ? selList.map(s=>`${s.category} — ${s.item}: ${s.value}`).join("\n") : "No selections data.";
+  const scopeText = intel ? intel.scopeNotes.map(s=>`${s.area}: ${s.note}`).join("\n\n") : "No scope notes.";
   return `You are a construction field consultant for ${project.gc}, on the ${project.name} project at ${project.location} (owner: ${project.owner}). Today is ${fmt(today)} — ~${pct}% through the schedule.
 
 ACTIVE PHASES: ${activePhases.length ? activePhases.map(p=>p.label).join(", ") : "None"}
@@ -578,10 +586,11 @@ Exactly 4 numbered questions for the GC — specific, answerable in 1-3 sentence
 Under 450 words. Direct, field-literal, no fluff.`;
 }
 
-function buildIntelPrompt(project, question) {
+function buildIntelPrompt(project, question, effSelections) {
   const intel = PROJECT_INTEL[project.id];
-  const selectionsText = intel ? intel.selections.map(s=>`${s.category} — ${s.item}: ${s.value}`).join("\\n") : "No selections data.";
-  const scopeText = intel ? intel.scopeNotes.map(s=>`${s.area}: ${s.note}`).join("\\n\\n") : "No scope notes.";
+  const selList = effSelections || (intel ? intel.selections : null);
+  const selectionsText = selList ? selList.map(s=>`${s.category} — ${s.item}: ${s.value}`).join("\n") : "No selections data.";
+  const scopeText = intel ? intel.scopeNotes.map(s=>`${s.area}: ${s.note}`).join("\n\n") : "No scope notes.";
   return `You are a construction field assistant for ${project.gc} on the ${project.name} project at ${project.location} (owner: ${project.owner}).
 
 You have access to the following project knowledge base — use it to answer questions accurately. If the answer isn't in the data, say so directly rather than guessing.
@@ -593,17 +602,28 @@ SCOPE NOTES BY AREA:
 ${scopeText}
 
 SCHEDULE PHASES:
-${project.phases.map(p=>`${p.label}: ${p.start} to ${p.end}`).join("\\n")}
+${project.phases.map(p=>`${p.label}: ${p.start} to ${p.end}`).join("\n")}
 
 OPEN ITEMS:
-${project.openItems.join("\\n")}
+${project.openItems.join("\n")}
 
 Answer the GC's question below clearly and concisely. If the question is about a quantity or material that's confirmed, state it directly. If it's TBD, say so and note what's needed to resolve it. Field-literal language, no fluff, under 150 words unless the question genuinely requires more.`;
 }
 
+function friendlyApiError(e) {
+  const m = (e && e.message) ? e.message : String(e);
+  if (/invalid x-api-key|authentication_error/i.test(m)) return "API key rejected - tap Settings and re-check the key (console.anthropic.com > API Keys).";
+  if (/rate.?limit|429|overloaded/i.test(m)) return "Anthropic is busy or rate-limiting - wait ~30 seconds and try again.";
+  if (/credit|billing|insufficient/i.test(m)) return "API billing issue - check credits at console.anthropic.com.";
+  if (/Failed to fetch|NetworkError|Load failed/i.test(m)) return "Cannot reach the API - check your signal and try again.";
+  return "API error: " + m;
+}
+
 function parseQuestions(text) {
   const section = (text.match(/## DAILY Q&A\n([\s\S]*?)(?=\n## |$)/)||[])[1] || "";
-  return section.trim().split(/\n(?=\d+\.)/).map(q=>q.replace(/^\d+\.\s*/,"").trim()).filter(Boolean).slice(0,4);
+  const out = section.trim().split(/\n(?=\d+\.)/).map(q=>q.replace(/^\d+\.\s*/,"").trim()).filter(Boolean).slice(0,4);
+  if (out.length) return out;
+  return (text.match(/\d+\.\s+[^\n]{10,}\?/g)||[]).map(q=>q.replace(/^\d+\.\s*/,"").trim()).slice(0,4);
 }
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -613,6 +633,7 @@ const KEY_KEY = "ard_dash_apikey";
 const SYNC_KEY = "ard_dash_syncurl";
 const PROJECT_KEY = "ard_dash_active_project";
 const LOCAL_LOG_FALLBACK = "ard_dash_log_fallback";
+const INTEL_CHAT_PREFIX = "ard_dash_intel_chat::";
 function loadKey() { try { return localStorage.getItem(KEY_KEY)||""; } catch(e){ return ""; } }
 function saveKey(k) { try { localStorage.setItem(KEY_KEY,k); } catch(e){} }
 function loadSyncUrl() { try { return localStorage.getItem(SYNC_KEY)||""; } catch(e){ return ""; } }
@@ -621,6 +642,13 @@ function loadActiveProjectId() { try { return localStorage.getItem(PROJECT_KEY)|
 function saveActiveProjectId(id) { try { localStorage.setItem(PROJECT_KEY,id); } catch(e){} }
 function loadFallbackLog() { try { return JSON.parse(localStorage.getItem(LOCAL_LOG_FALLBACK)||"[]"); } catch(e){ return []; } }
 function saveFallbackLog(l) { try { localStorage.setItem(LOCAL_LOG_FALLBACK,JSON.stringify(l)); } catch(e){} }
+function loadIntelChat(pid) { try { return JSON.parse(localStorage.getItem(INTEL_CHAT_PREFIX+pid)||"[]"); } catch(e){ return []; } }
+function saveIntelChat(pid,c) { try { localStorage.setItem(INTEL_CHAT_PREFIX+pid,JSON.stringify(c.slice(-40))); } catch(e){} }
+const SEL_OVERRIDES_KEY = "ard_dash_sel_overrides";
+function loadSelOverrides() { try { return JSON.parse(localStorage.getItem(SEL_OVERRIDES_KEY)||"{}"); } catch(e){ return {}; } }
+function saveSelOverridesLS(o) { try { localStorage.setItem(SEL_OVERRIDES_KEY,JSON.stringify(o)); } catch(e){} }
+function selKey(s) { return s.category+"::"+s.item; }
+function applyOverrides(pid, selections, overrides) { const po=overrides[pid]||{}; return selections.map(s=>{ const k=selKey(s); const ov=po[k]; return (ov!==undefined&&ov!=="")?Object.assign({},s,{value:ov,edited:true}):Object.assign({},s,{edited:false}); }); }
 
 const C = { bg:"#0B0E11",panel:"#12171C",panel2:"#171D24",hair:"#2A333C",ink:"#EAF0F4",mut:"#8B98A4",crit:"#E63946",qc:"#06D6A0",proc:"#7B2CBF",warn:"#FFD60A",accent:"#1F9E3D" };
 
@@ -634,6 +662,7 @@ function Dashboard() {
   const activePhases = getActivePhases(project,today);
   const upcomingPhases = getUpcomingPhases(project,today);
   const todayEvents = getTodayEvents(project,today);
+  const upcomingEvents = getUpcomingEvents(project,today);
   const pct = projectProgress(project,today);
   const daysLeft = daysBetween(today,toDate(project.endDate));
 
@@ -650,7 +679,7 @@ function Dashboard() {
 
   // intel tab state
   const [intelQuestion,setIntelQuestion] = useState("");
-  const [intelChat,setIntelChat] = useState([]);
+  const [intelChat,setIntelChat] = useState(()=>loadIntelChat(loadActiveProjectId()));
   const [intelLoading,setIntelLoading] = useState(false);
   const [intelTab,setIntelTab] = useState("ask"); // "ask" | "selections" | "scope"
   const chatEndRef = useRef(null);
@@ -662,16 +691,51 @@ function Dashboard() {
   const [syncUrlDraft,setSyncUrlDraft] = useState("");
   const [syncMsg,setSyncMsg] = useState("");
   const [showSyncSetup,setShowSyncSetup] = useState(!loadSyncUrl());
+  const [settingsOpen,setSettingsOpen] = useState(!(loadKey()&&loadSyncUrl()));
+  const [selOverrides,setSelOverrides] = useState(loadSelOverrides);
+  const [editingSel,setEditingSel] = useState(null);
+  const [selDraft,setSelDraft] = useState("");
+  const [selSyncNote,setSelSyncNote] = useState("");
+  const intelBase = PROJECT_INTEL[project.id];
+  const effSelections = intelBase?applyOverrides(project.id,intelBase.selections,selOverrides):null;
+  const tbdCount = effSelections?effSelections.filter(s=>s.value.includes("TBD")).length:0;
 
-  function switchProject(id) { setActiveProjectId(id); saveActiveProjectId(id); setBriefing(""); setSubmitted(false); setAnswers({1:"",2:"",3:"",4:""}); setError(""); setIntelChat([]); }
-  useEffect(()=>{ refreshLog(); },[syncUrl]);
+  function switchProject(id) { setActiveProjectId(id); saveActiveProjectId(id); setBriefing(""); setSubmitted(false); setAnswers({1:"",2:"",3:"",4:""}); setError(""); setIntelChat(loadIntelChat(id)); setEditingSel(null); setSelDraft(""); }
+  useEffect(()=>{ refreshLog(); refreshSelections(); },[syncUrl]);
   useEffect(()=>{ if(chatEndRef.current) chatEndRef.current.scrollIntoView({behavior:"smooth"}); },[intelChat]);
+  useEffect(()=>{ saveIntelChat(activeProjectId,intelChat); },[intelChat,activeProjectId]);
 
   async function refreshLog() {
     if(!syncUrl){ setLog(loadFallbackLog()); return; }
     setLogLoading(true);
     try{ const res=await fetch(syncUrl+"?action=fetchLog"); const data=await res.json(); if(data.ok) setLog(data.entries||[]); else setLog(loadFallbackLog()); } catch(e){ setLog(loadFallbackLog()); }
     setLogLoading(false);
+  }
+  async function refreshSelections() {
+    if(!syncUrl) return;
+    try{
+      const res=await fetch(syncUrl+"?action=fetchSelections");
+      const data=await res.json();
+      if(data&&data.ok&&data.overrides){
+        const local=loadSelOverrides(); const merged={};
+        Object.keys(local).concat(Object.keys(data.overrides)).forEach(function(pid){ merged[pid]=Object.assign({},local[pid]||{},data.overrides[pid]||{}); });
+        saveSelOverridesLS(merged); setSelOverrides(merged);
+      }
+    }catch(e){}
+  }
+  async function saveSelection(key, value) {
+    const v=(value||"").trim();
+    const next=Object.assign({},selOverrides); next[project.id]=Object.assign({},next[project.id]||{});
+    if(v==="") delete next[project.id][key]; else next[project.id][key]=v;
+    setSelOverrides(next); saveSelOverridesLS(next);
+    setEditingSel(null); setSelDraft("");
+    if(!syncUrl){ setSelSyncNote("\u2713 Saved on this device"); setTimeout(()=>setSelSyncNote(""),2500); return; }
+    try{
+      const res=await fetch(syncUrl,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({action:"setSelection",projectId:project.id,key:key,value:v})});
+      const data=await res.json();
+      if(data&&data.ok){ setSelSyncNote("\u2713 Saved + synced"); setTimeout(()=>setSelSyncNote(""),2500); }
+      else { setSelSyncNote("Saved on this device \u2014 update the Apps Script to sync selections across devices"); setTimeout(()=>setSelSyncNote(""),6000); }
+    }catch(e){ setSelSyncNote("Saved on this device \u2014 couldn\u2019t reach the Sheet"); setTimeout(()=>setSelSyncNote(""),5000); }
   }
   async function pushEntry(entry) {
     if(!syncUrl){ const nl=[entry,...loadFallbackLog().filter(x=>!(x.date===entry.date&&x.projectId===entry.projectId))]; saveFallbackLog(nl); setLog(nl); return; }
@@ -693,10 +757,10 @@ function Dashboard() {
     if(!apiKey){ setError("Add your Claude API key below first."); return; }
     setLoading(true); setError(""); setBriefing(""); setSubmitted(false); setAnswers({1:"",2:"",3:"",4:""});
     try{
-      const res=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json","x-api-key":apiKey,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},body:JSON.stringify({model:"claude-sonnet-4-6",max_tokens:1000,system:buildSystemPrompt(project,today,activePhases,upcomingPhases,todayEvents),messages:[{role:"user",content:"Generate today's field briefing."}]})});
+      const res=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json","x-api-key":apiKey,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},body:JSON.stringify({model:"claude-sonnet-4-6",max_tokens:1000,system:buildSystemPrompt(project,today,activePhases,upcomingPhases,todayEvents,effSelections),messages:[{role:"user",content:"Generate today's field briefing."}]})});
       const data=await res.json(); if(data.error) throw new Error(data.error.message);
       setBriefing((data.content&&data.content[0]&&data.content[0].text)||"");
-    }catch(e){ setError("API error: "+e.message); }
+    }catch(e){ setError(friendlyApiError(e)); }
     setLoading(false);
   }
 
@@ -708,9 +772,9 @@ function Dashboard() {
     try{
       const res=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json","x-api-key":apiKey,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},body:JSON.stringify({model:"claude-sonnet-4-6",max_tokens:1000,system:`You are a construction PM for ${project.gc}, ${project.name}, ${project.location}. Today is ${fmt(today)}.`,messages:[{role:"user",content:`Based on today's field briefing and the GC's answers, generate:\n1. A SHORT status summary (2-3 sentences).\n2. ACTION ITEMS — numbered follow-ups with deadlines.\n3. FLAGS — issues or risks surfaced by the answers.\nUnder 300 words. Field-literal.\n\nBRIEFING:\n${briefing}\n\nGC'S ANSWERS:\n${qaText}`}]})});
       const data=await res.json(); const analysis=(data.content&&data.content[0]&&data.content[0].text)||"";
-      const entry={projectId:project.id,projectName:project.name,date:today.toISOString().split("T")[0],dateLabel:fmt(today),activePhases:activePhases.map(p=>p.label),qa:questions.map((q,i)=>({q,a:answers[i+1]||""})),analysis,briefing};
+      const entry={projectId:project.id,projectName:project.name,date:localDateStr(today),dateLabel:fmt(today),activePhases:activePhases.map(p=>p.label),qa:questions.map((q,i)=>({q,a:answers[i+1]||""})),analysis,briefing};
       await pushEntry(entry); setSubmitted(true);
-    }catch(e){ setError("Submit error: "+e.message); }
+    }catch(e){ setError(friendlyApiError(e)); }
     setLoading(false);
   }
 
@@ -719,11 +783,11 @@ function Dashboard() {
     const q=intelQuestion.trim(); if(!q) return;
     setIntelChat(c=>[...c,{role:"user",text:q}]); setIntelQuestion(""); setIntelLoading(true);
     try{
-      const res=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json","x-api-key":apiKey,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},body:JSON.stringify({model:"claude-sonnet-4-6",max_tokens:600,system:buildIntelPrompt(project,q),messages:[{role:"user",content:q}]})});
+      const res=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json","x-api-key":apiKey,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},body:JSON.stringify({model:"claude-sonnet-4-6",max_tokens:600,system:buildIntelPrompt(project,q,effSelections),messages:[{role:"user",content:q}]})});
       const data=await res.json(); if(data.error) throw new Error(data.error.message);
       const answer=(data.content&&data.content[0]&&data.content[0].text)||"";
       setIntelChat(c=>[...c,{role:"assistant",text:answer}]);
-    }catch(e){ setIntelChat(c=>[...c,{role:"error",text:"API error: "+e.message}]); }
+    }catch(e){ setIntelChat(c=>[...c,{role:"error",text:friendlyApiError(e)}]); }
     setIntelLoading(false);
   }
 
@@ -745,7 +809,7 @@ function Dashboard() {
           h("div",{style:{fontFamily:"'Space Mono',monospace",fontSize:11,fontWeight:700,color:hc,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:10}},header),
           ...questions.map((q,qi)=>h("div",{key:qi,style:{marginBottom:14,background:C.panel2,borderRadius:8,padding:"12px 16px",border:`1px solid ${C.hair}`}},
             h("div",{style:{fontSize:13,color:C.ink,marginBottom:8,lineHeight:1.4}},h("span",{style:{color:hc,fontWeight:700,fontFamily:"'Space Mono',monospace"}},`${qi+1}. `),q),
-            submitted?h("div",{style:{fontSize:13,color:C.qc,fontStyle:"italic"}},answers[qi+1]||"(no answer)"):h("textarea",{value:answers[qi+1]||"",onChange:e=>setAnswers(a=>({...a,[qi+1]:e.target.value})),placeholder:"Type your answer here...",style:{width:"100%",background:C.bg,border:`1px solid ${C.hair}`,borderRadius:6,color:C.ink,fontSize:13,padding:"8px 10px",resize:"vertical",minHeight:60,outline:"none",boxSizing:"border-box"}})
+            submitted?h("div",{style:{fontSize:13,color:C.qc,fontStyle:"italic"}},answers[qi+1]||"(no answer)"):h("textarea",{value:answers[qi+1]||"",onChange:e=>setAnswers(a=>({...a,[qi+1]:e.target.value})),placeholder:"Type your answer here...",style:{width:"100%",background:C.bg,border:`1px solid ${C.hair}`,borderRadius:6,color:C.ink,fontSize:16,padding:"8px 10px",resize:"vertical",minHeight:60,outline:"none",boxSizing:"border-box"}})
           ))
         );
       }
@@ -759,6 +823,13 @@ function Dashboard() {
       activePhases.length===0?h("div",{style:{fontSize:12,color:C.mut,fontFamily:"'Space Mono',monospace"}},today<toDate(project.startDate)?"Project has not started yet":"Project complete"):activePhases.map(p=>h("div",{key:p.id,style:{background:p.color+"22",border:`1px solid ${p.color}`,borderRadius:20,padding:"4px 12px",fontSize:11,fontWeight:700,color:p.color,fontFamily:"'Space Mono',monospace"}},p.trade))
     ),
     ...todayEvents.map((e,i)=>h("div",{key:i,style:{background:e.color+"18",border:`1px solid ${e.color}`,borderRadius:8,padding:"8px 14px",fontSize:12,color:e.color,fontWeight:700,marginBottom:8,fontFamily:"'Space Mono',monospace"}},e.label)),
+    upcomingEvents.length>0&&h("div",{style:{background:C.panel2,border:`1px solid ${C.hair}`,borderRadius:8,padding:"10px 14px",marginBottom:12}},
+      h("div",{style:{fontFamily:"'Space Mono',monospace",fontSize:10,fontWeight:700,color:C.mut,letterSpacing:"0.1em",marginBottom:7}},"NEXT 7 DAYS"),
+      ...upcomingEvents.map((e,i)=>h("div",{key:i,style:{display:"flex",gap:10,fontSize:12,marginBottom:5,alignItems:"baseline"}},
+        h("span",{style:{fontFamily:"'Space Mono',monospace",color:C.mut,minWidth:48,flexShrink:0}},toDate(e.date).toLocaleDateString("en-US",{month:"short",day:"numeric"})),
+        h("span",{style:{color:e.color,fontWeight:700,lineHeight:1.35}},e.label)
+      ))
+    ),
     (!briefing&&!loading)&&h("button",{onClick:fetchBriefing,disabled:!apiKey,style:{width:"100%",padding:"14px",background:apiKey?"#1F9E3D":C.panel2,border:apiKey?"none":`1px solid ${C.hair}`,borderRadius:8,color:apiKey?"#fff":C.mut,fontSize:15,fontWeight:800,cursor:apiKey?"pointer":"not-allowed",marginTop:8,letterSpacing:"0.02em"}},apiKey?"Generate Today's Field Briefing":"Add your API key below to begin"),
     loading&&h("div",{style:{textAlign:"center",padding:"32px",color:C.mut,fontFamily:"'Space Mono',monospace",fontSize:12}},h("span",{className:"spin",style:{fontSize:24,display:"inline-block"}},"↻")," Working…"),
     error&&h("div",{style:{background:"#E6394618",border:"1px solid #E63946",borderRadius:8,padding:"12px 16px",color:"#E63946",fontSize:13,marginTop:8}},error),
@@ -790,7 +861,8 @@ function Dashboard() {
     // ASK sub-tab
     intelTab==="ask"&&h("div",{style:{display:"flex",flexDirection:"column",gap:0}},
       h("div",{style:{background:C.panel2,border:`1px solid ${C.hair}`,borderRadius:8,padding:"10px 14px",marginBottom:12,fontSize:12,color:C.mut,lineHeight:1.5}},
-        "Ask anything about this project — quantities, materials, scope, sequence, contacts. E.g. ",h("em",null,'"How much tile is in the master shower?"')," or ",h("em",null,'"What grout color did we pick?"')
+        "Ask anything about this project — quantities, materials, scope, sequence, contacts. E.g. ",h("em",null,'"How much tile is in the master shower?"')," or ",h("em",null,'"What grout color did we pick?"'),
+        intelChat.length>0&&h("button",{onClick:()=>setIntelChat([]),style:{display:"block",marginTop:8,background:"none",border:`1px solid ${C.hair}`,borderRadius:6,color:C.mut,fontSize:10,padding:"3px 10px",cursor:"pointer",fontFamily:"'Space Mono',monospace"}},"Clear chat history")
       ),
       // chat history
       h("div",{style:{minHeight:120,marginBottom:12}},
@@ -803,19 +875,38 @@ function Dashboard() {
       ),
       // input
       h("div",{style:{display:"flex",gap:8,position:"sticky",bottom:0,background:C.bg,paddingTop:8}},
-        h("input",{type:"text",value:intelQuestion,onChange:e=>setIntelQuestion(e.target.value),onKeyDown:e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();askIntel();}},placeholder:"Ask a question about this project…",style:{flex:1,background:C.panel2,border:`1px solid ${C.hair}`,borderRadius:8,color:C.ink,fontSize:13,padding:"11px 14px",outline:"none",boxSizing:"border-box"}}),
+        h("input",{type:"text",value:intelQuestion,onChange:e=>setIntelQuestion(e.target.value),onKeyDown:e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();askIntel();}},placeholder:"Ask a question about this project…",style:{flex:1,background:C.panel2,border:`1px solid ${C.hair}`,borderRadius:8,color:C.ink,fontSize:16,padding:"11px 14px",outline:"none",boxSizing:"border-box"}}),
         h("button",{onClick:askIntel,disabled:intelLoading||!intelQuestion.trim(),style:{background:"#0066FF",border:"none",borderRadius:8,color:"#fff",fontWeight:800,fontSize:20,padding:"0 16px",cursor:intelLoading||!intelQuestion.trim()?"not-allowed":"pointer",opacity:intelLoading||!intelQuestion.trim()?0.4:1}},"↑")
       )
     ),
     // SELECTIONS sub-tab
     intelTab==="selections"&&h("div",null,
-      intel&&Object.entries(intel.selections.reduce((acc,s)=>{ (acc[s.category]=acc[s.category]||[]).push(s); return acc; },{})).map(([cat,items])=>
-        h("div",{key:cat,style:{marginBottom:16}},
+      h("div",{style:{fontFamily:"'Space Mono',monospace",fontSize:10,color:C.mut,marginBottom:12,lineHeight:1.5}},"Tap Edit to update a selection as it gets confirmed in the field. Edits feed the daily briefing + Ask Anything, and sync to your Sheet."),
+      selSyncNote&&h("div",{style:{fontFamily:"'Space Mono',monospace",fontSize:11,color:C.qc,marginBottom:10}},selSyncNote),
+      effSelections&&Object.entries(effSelections.reduce((acc,s)=>{ (acc[s.category]=acc[s.category]||[]).push(s); return acc; },{})).map(([cat,items])=>
+        h("div",{key:cat,style:{marginBottom:18}},
           h("div",{style:{fontFamily:"'Space Mono',monospace",fontSize:10,fontWeight:700,color:C.mut,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:6,paddingBottom:4,borderBottom:`1px solid ${C.hair}`}},cat),
-          ...items.map((s,i)=>h("div",{key:i,style:{display:"flex",gap:12,marginBottom:8,fontSize:13}},
-            h("div",{style:{color:C.mut,minWidth:130,flexShrink:0}},s.item),
-            h("div",{style:{color:s.value.includes("TBD")?"#FFD60A":C.ink,fontWeight:s.value.includes("TBD")?700:400,lineHeight:1.4}},s.value)
-          ))
+          ...items.map((s,i)=>{
+            const k=selKey(s); const isEditing=editingSel===k;
+            return h("div",{key:i,style:{marginBottom:10}},
+              h("div",{style:{display:"flex",gap:12,fontSize:13,alignItems:"baseline"}},
+                h("div",{style:{color:C.mut,minWidth:130,flexShrink:0}},s.item),
+                !isEditing&&h("div",{style:{flex:1,color:s.value.includes("TBD")?"#FFD60A":C.ink,fontWeight:s.value.includes("TBD")?700:400,lineHeight:1.4}},
+                  s.value,
+                  s.edited&&h("span",{style:{marginLeft:7,fontSize:9,color:C.qc,fontFamily:"'Space Mono',monospace",fontWeight:700}},"EDITED")
+                ),
+                !isEditing&&h("button",{onClick:()=>{setEditingSel(k);setSelDraft(s.value);},style:{background:"none",border:`1px solid ${C.hair}`,borderRadius:5,color:C.mut,fontSize:10,padding:"3px 10px",cursor:"pointer",flexShrink:0,fontFamily:"'Space Mono',monospace"}},"Edit")
+              ),
+              isEditing&&h("div",{style:{marginTop:6}},
+                h("textarea",{value:selDraft,onChange:e=>setSelDraft(e.target.value),autoFocus:true,style:{width:"100%",background:C.bg,border:"1px solid #0066FF",borderRadius:6,color:C.ink,fontSize:16,padding:"9px 11px",resize:"vertical",minHeight:54,outline:"none",boxSizing:"border-box"}}),
+                h("div",{style:{display:"flex",gap:8,marginTop:7,flexWrap:"wrap"}},
+                  h("button",{onClick:()=>saveSelection(k,selDraft),style:{background:"#0066FF",border:"none",borderRadius:6,color:"#fff",fontSize:12,fontWeight:800,padding:"8px 18px",cursor:"pointer"}},"Save"),
+                  s.edited&&h("button",{onClick:()=>saveSelection(k,""),style:{background:"none",border:`1px solid ${C.warn}`,borderRadius:6,color:C.warn,fontSize:11,padding:"8px 12px",cursor:"pointer",fontFamily:"'Space Mono',monospace"}},"Reset to contract"),
+                  h("button",{onClick:()=>{setEditingSel(null);setSelDraft("");},style:{background:"none",border:`1px solid ${C.hair}`,borderRadius:6,color:C.mut,fontSize:11,padding:"8px 12px",cursor:"pointer",fontFamily:"'Space Mono',monospace"}},"Cancel")
+                )
+              )
+            );
+          })
         )
       )
     ),
@@ -858,7 +949,15 @@ function Dashboard() {
           h("button",{onClick:()=>setShowSyncSetup(s=>!s),style:{background:"none",border:`1px solid ${C.hair}`,borderRadius:6,color:C.warn,fontSize:11,padding:"6px 12px",cursor:"pointer",fontFamily:"'Space Mono',monospace",marginBottom:showSyncSetup?8:0}},(showSyncSetup?"▾ ":"▸ ")+"Connect cross-device sync (Google Sheet)"),
           showSyncSetup&&h("div",{style:{marginTop:6}},h("div",{style:{fontFamily:"'Space Mono',monospace",fontSize:10,color:C.mut,marginBottom:6,lineHeight:1.6}},"One Sheet covers ALL projects — paste your Apps Script Web App URL."),h("div",{style:{display:"flex",gap:8}},h("input",{type:"text",value:syncUrlDraft,onChange:e=>setSyncUrlDraft(e.target.value),onKeyDown:e=>{if(e.key==="Enter")handleSaveSyncUrl();},placeholder:"https://script.google.com/macros/s/.../exec",style:{flex:1,background:C.panel2,border:`1px solid ${C.hair}`,borderRadius:6,color:C.ink,fontFamily:"'Space Mono',monospace",fontSize:12,padding:"8px 10px",outline:"none",boxSizing:"border-box"}}),h("button",{onClick:handleSaveSyncUrl,style:{background:"#0066FF",border:"none",borderRadius:6,color:"#fff",fontSize:12,fontWeight:700,padding:"8px 16px",cursor:"pointer",fontFamily:"'Space Mono',monospace",whiteSpace:"nowrap"}},"Connect")))
         ),
-    syncMsg&&h("div",{style:{fontFamily:"'Space Mono',monospace",fontSize:11,color:C.qc,marginTop:8}},syncMsg)
+    syncMsg&&h("div",{style:{fontFamily:"'Space Mono',monospace",fontSize:11,color:C.qc,marginTop:8}},syncMsg),
+    (apiKey&&syncUrl)&&h("button",{onClick:()=>setSettingsOpen(false),style:{marginTop:10,background:"none",border:`1px solid ${C.hair}`,borderRadius:6,color:C.mut,fontSize:10,padding:"4px 12px",cursor:"pointer",fontFamily:"'Space Mono',monospace"}},"\u25B4 Hide settings")
+  );
+  const settingsSlim = h("div",{style:{marginTop:12,paddingTop:10,borderTop:`1px solid ${C.hair}`,display:"flex",justifyContent:"space-between",alignItems:"center"}},
+    h("div",{style:{fontFamily:"'Space Mono',monospace",fontSize:11,color:C.mut}},
+      h("span",{style:{color:apiKey?C.qc:C.crit}},"\u25CF "),"Key",
+      h("span",{style:{color:syncUrl?C.qc:C.warn,marginLeft:10}},"\u25CF "),"Sync"
+    ),
+    h("button",{onClick:()=>setSettingsOpen(true),style:{background:"none",border:`1px solid ${C.hair}`,borderRadius:6,color:C.mut,fontSize:10,padding:"4px 12px",cursor:"pointer",fontFamily:"'Space Mono',monospace"}},"\u2699 Settings")
   );
 
   // ── ROOT ──────────────────────────────────────────────────────────────────
@@ -875,19 +974,20 @@ function Dashboard() {
           h("div",{style:{background:C.hair,borderRadius:4,height:6,overflow:"hidden"}},h("div",{style:{width:Math.min(100,pct)+"%",height:"100%",background:pct>=100?C.qc:"#1F9E3D",borderRadius:4,transition:"width 0.6s ease"}})),
           h("div",{style:{fontFamily:"'Space Mono',monospace",fontSize:10,color:C.mut,marginTop:5,textAlign:"right"}},daysLeft>0?daysLeft+" days remaining":"Target date reached")
         ),
-        settingsPanel
+        settingsOpen?settingsPanel:settingsSlim
       )
     ),
     h("div",{style:{background:C.panel,borderBottom:`1px solid ${C.hair}`}},
       h("div",{style:{maxWidth:680,margin:"0 auto",display:"flex"}},
         tabs.map(([id,label])=>h("button",{key:id,onClick:()=>setTab(id),style:{padding:"11px 14px",background:"none",border:"none",cursor:"pointer",fontFamily:"'Space Mono',monospace",fontSize:11,fontWeight:700,color:tab===id?C.ink:C.mut,borderBottom:tab===id?"2px solid #1F9E3D":"2px solid transparent",whiteSpace:"nowrap"}},
           label,
-          id==="log"&&log.length>0&&h("span",{style:{marginLeft:7,background:"#1F9E3D",color:"#fff",borderRadius:10,padding:"1px 7px",fontSize:10}},log.length)
+          id==="log"&&log.length>0&&h("span",{style:{marginLeft:7,background:"#1F9E3D",color:"#fff",borderRadius:10,padding:"1px 7px",fontSize:10}},log.length),
+          id==="intel"&&tbdCount>0&&h("span",{style:{marginLeft:7,background:"#FFD60A",color:"#101417",borderRadius:10,padding:"1px 7px",fontSize:10,fontWeight:700}},tbdCount)
         ))
       )
     ),
     h("div",{style:{maxWidth:680,margin:"0 auto",padding:"24px 20px"}},tab==="today"?todayTab:tab==="intel"?intelTab_:logTab_),
-    h("div",{style:{textAlign:"center",padding:"20px",fontFamily:"'Space Mono',monospace",fontSize:10,color:C.mut,borderTop:`1px solid ${C.hair}`,marginTop:20}},"CSLB B/C-33 #1039947 · Osmar@advremodel.com · 760-485-7076 · Schedules tentative — subject to AHJ, selections, long-lead delivery")
+    h("div",{style:{textAlign:"center",padding:"20px",fontFamily:"'Space Mono',monospace",fontSize:10,color:C.mut,borderTop:`1px solid ${C.hair}`,marginTop:20}},"CSLB B/C-33 #1039947 · Osmar@advremodel.com · 760-485-7076 · Schedules tentative — subject to AHJ, selections, long-lead delivery · "+APP_VERSION)
   );
 }
 ReactDOM.createRoot(document.getElementById("root")).render(h(Dashboard));
