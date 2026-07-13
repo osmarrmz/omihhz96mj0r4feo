@@ -331,7 +331,7 @@ function(a,b,c){if(!Vd(b))throw Error(n(200));return Wd(null,a,b,!1,c)};Q.unmoun
 
 <script>
 const { useState, useEffect, useRef } = React;
-const APP_VERSION = "v5.1";
+const APP_VERSION = "v6.0";
 const h = React.createElement;
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -421,6 +421,106 @@ const PROJECT_INTEL = {
 // ════════════════════════════════════════════════════════════════════════════
 // PROJECTS
 // ════════════════════════════════════════════════════════════════════════════
+// Selection "needed by" dates derived from the schedule (procurement events / phase starts)
+const SELECTION_DEADLINES = {
+  "superior-ct": {
+    "Tile::New bath shower tile":"2026-07-06","Tile::New bath floor tile":"2026-07-06","Tile::Casita shower tile":"2026-07-06","Tile::Casita floor tile":"2026-07-06","Tile::Grout color (showers)":"2026-07-06",
+    "Flooring::Vinyl plank product + color":"2026-07-06",
+    "Plumbing::Plumbing fixtures / faucets":"2026-07-06","Plumbing::Anti-scald valve type":"2026-07-06",
+    "Countertop::Kitchen countertop material":"2026-08-10","Countertop::Kitchen sink":"2026-08-10",
+    "Cabinetry::Kitchen cabinet door style":"2026-06-22","Cabinetry::Den closet finish":"2026-06-22","Cabinetry::Laundry linen closet interior":"2026-06-22","Cabinetry::Laundry service-sink cabinet config":"2026-06-22","Cabinetry::Casita vanity top / sink / faucet":"2026-06-22",
+    "Paint::Product line":"2026-08-19","Paint::Wall colors":"2026-08-19","Paint::Ceiling color":"2026-08-19","Paint::Millwork / door sheen":"2026-08-19",
+    "Glass::New bath shower glass":"2026-08-19","Glass::Casita shower glass":"2026-08-19"
+  },
+  "303-desert-holly": {
+    "Appliances::Appliance selections":"2026-06-20",
+    "Flooring::Flooring product":"2026-06-20","Flooring::Flooring color / finish":"2026-06-20",
+    "Plumbing::Shower fixtures / trim kits":"2026-06-20","Plumbing::Plumbing fixtures / faucets":"2026-06-20",
+    "Tile::Shower tile (all showers)":"2026-06-23","Tile::Floor tile":"2026-06-23",
+    "Countertop::Material":"2026-06-23","Countertop::Edge profile":"2026-06-23","Countertop::Backsplash":"2026-06-23",
+    "Cabinetry::Cabinet door style":"2026-06-23","Cabinetry::Cabinet finish / color":"2026-06-23",
+    "Tile::Grout color":"2026-07-08",
+    "Paint::Wall colors":"2026-07-08","Paint::Trim / millwork color":"2026-07-08","Paint::Ceiling color":"2026-07-08",
+    "Glass::Shower doors (3)":"2026-10-05",
+    "Baseboard::Baseboard profile":"2026-09-28",
+    "Laundry::Laundry cabinetry path":"2026-10-05"
+  }
+};
+
+// Field-literal prep checklists per inspection hold (keyed project id -> hold date)
+const INSPECTION_CHECKLISTS = {
+  "superior-ct": {
+    "2026-07-16": [
+      "Framing complete incl. fire-blocking \u2014 nothing covered",
+      "Pocket frames set & braced (new bath + laundry)",
+      "Master access framing done, ready to inspect",
+      "Rough DWV + supply in \u2014 water/pressure test holding",
+      "Anti-scald valves set at both showers",
+      "Den: cans, boxes, dimmer roughed & visible",
+      "Permit card + approved plans on site",
+      "Access/ladder clear for inspector"
+    ],
+    "2026-07-23": [
+      "Both pans pre-sloped 1/4\u2033 per ft to drain",
+      "Liner/membrane continuous, corners folded \u2014 no low fasteners",
+      "Drains clamped, test plugs set",
+      "Water held for AHJ-required duration (verify \u2014 commonly 24hr)",
+      "Timestamped photos of both pans full",
+      "Do NOT drain until inspector signs off",
+      "No tile or thinset staged in showers"
+    ],
+    "2026-09-11": [
+      "All fixtures set + leak-checked",
+      "GFCI protection tested at wet areas",
+      "Bath exhaust operational + vented (new bath scope confirmed)",
+      "Tempered labels visible on both glass enclosures",
+      "Smoke/CO alarms installed per code",
+      "Anti-scald verified at trim",
+      "Site clean \u2014 permit card ready"
+    ]
+  },
+  "303-desert-holly": {
+    "2026-07-10": [
+      "Pocket-door wall framed plumb/level",
+      "Fire-blocking installed per plan",
+      "Nothing covered \u2014 all framing visible",
+      "Permit card + approved plans on site"
+    ],
+    "2026-07-17": [
+      "Relocated lines complete per plan",
+      "Valves + stops set",
+      "Water/pressure test holding at inspection time",
+      "All work visible & uncovered"
+    ],
+    "2026-07-24": [
+      "Pre-slope correct to drains",
+      "Liner continuous, corners folded, up walls per spec",
+      "Drains clamped, test plugs set",
+      "Flood test held per AHJ duration \u2014 verify with inspector",
+      "Timestamped photos before inspector arrives"
+    ],
+    "2026-07-31": [
+      "Membrane coverage/thickness per manufacturer spec",
+      "Corners + seams detailed",
+      "Cure time met before inspection",
+      "No tile staged until signed off"
+    ],
+    "2026-11-13": [
+      "All fixtures set + leak-checked",
+      "Tempered labels visible on all 3 glass doors",
+      "Smoke/CO alarms installed",
+      "Punch list complete, site clean",
+      "Payment schedule + lien releases reconciled"
+    ]
+  }
+};
+
+function shortDate(s) { return toDate(s).toLocaleDateString("en-US",{month:"short",day:"numeric"}); }
+function fmtMoney(n) { return "$"+(parseFloat(n)||0).toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2}); }
+function coStatusColor(s) { return s==="Proposed"?"#FFD60A":s==="Approved"?"#06D6A0":s==="Invoiced"?"#0066FF":"#8B98A4"; }
+function mergeNested(local, server) { const out={}; const pids={}; Object.keys(local).forEach(p=>pids[p]=1); Object.keys(server).forEach(p=>pids[p]=1); Object.keys(pids).forEach(p=>{ out[p]=Object.assign({},local[p]||{},server[p]||{}); }); return out; }
+function parseActionItems(text) { if(!text) return []; const m=text.match(/ACTION ITEMS[\s\S]*?(?=FLAGS|$)/i); const seg=m?m[0]:text; const items=(seg.match(/^\s*\d+\.\s+.+$/gm)||[]).map(l=>l.replace(/^\s*\d+\.\s*/,"").trim()); return items.filter(Boolean).slice(0,10); }
+
 const PROJECTS = [
   {
     id: "superior-ct",
@@ -430,6 +530,7 @@ const PROJECTS = [
     gc: "Advanced Remodel & Design",
     startDate: "2026-06-22",
     endDate: "2026-09-11",
+    contractBase: 66796.50,
     phases: [
       { id:"demo",      label:"Demo — all zones",                     start:"2026-06-22", end:"2026-06-27", color:"#5C6770", trade:"Demo" },
       { id:"framing",   label:"Framing: walls, pocket frames",        start:"2026-06-29", end:"2026-07-11", color:"#FF6B00", trade:"Framing" },
@@ -479,6 +580,7 @@ const PROJECTS = [
     gc: "Osmar Ramirez — Advanced Remodel (CSLB #1039947)",
     startDate: "2026-06-08",
     endDate: "2026-11-14",
+    contractBase: null,
     phases: [
       { id:"precon",    label:"Pre-con, Permit & Selections",              start:"2026-06-08", end:"2026-06-28", color:"#8B98A4", trade:"Pre-con" },
       { id:"demo",      label:"Demolition — all areas",                    start:"2026-06-15", end:"2026-07-05", color:"#5C6770", trade:"Demo" },
@@ -555,7 +657,10 @@ function getTodayEvents(project, today) { const ds = localDateStr(today); return
 function getUpcomingEvents(project, today, days) { days=days||7; const ds=localDateStr(today); const horizon=new Date(today); horizon.setDate(horizon.getDate()+days); const hs=localDateStr(horizon); return [].concat(project.holds,project.procurement,project.milestones).filter(function(e){return e.date>ds&&e.date<=hs;}).sort(function(a,b){return a.date<b.date?-1:1;}); }
 function projectProgress(project, today) { const start=toDate(project.startDate),end=toDate(project.endDate); const total=daysBetween(start,end); const elapsed=Math.max(0,Math.min(total,daysBetween(start,today))); return Math.round(elapsed/total*100); }
 
-function buildSystemPrompt(project, today, activePhases, upcomingPhases, events, effSelections) {
+function buildSystemPrompt(project, today, activePhases, upcomingPhases, events, effSelections, openTasks) {
+  const taskText = (openTasks&&openTasks.length)? openTasks.map(t=>"- "+t.text).join("\n") : "None";
+  const dlSel = effSelections? effSelections.filter(s=>s.deadline&&s.value.includes("TBD")) : [];
+  const dlText = dlSel.length? dlSel.map(s=>"- "+s.category+"/"+s.item+": needed by "+s.deadline).join("\n") : "None";
   const pct = projectProgress(project, today);
   const intel = PROJECT_INTEL[project.id];
   const selList = effSelections || (intel ? intel.selections : null);
@@ -567,6 +672,12 @@ ACTIVE PHASES: ${activePhases.length ? activePhases.map(p=>p.label).join(", ") :
 UPCOMING 7 DAYS: ${upcomingPhases.length ? upcomingPhases.map(p=>p.label).join(", ") : "None"}
 TODAY'S EVENTS: ${events.length ? events.map(e=>e.label).join(", ") : "None"}
 OPEN ITEMS: ${project.openItems.join(" | ")}
+
+OPEN TASKS (carryover \u2014 fold into today's plan where relevant):
+${taskText}
+
+UNRESOLVED SELECTIONS WITH DEADLINES:
+${dlText}
 
 MATERIAL SELECTIONS:
 ${selectionsText}
@@ -648,7 +759,20 @@ const SEL_OVERRIDES_KEY = "ard_dash_sel_overrides";
 function loadSelOverrides() { try { return JSON.parse(localStorage.getItem(SEL_OVERRIDES_KEY)||"{}"); } catch(e){ return {}; } }
 function saveSelOverridesLS(o) { try { localStorage.setItem(SEL_OVERRIDES_KEY,JSON.stringify(o)); } catch(e){} }
 function selKey(s) { return s.category+"::"+s.item; }
-function applyOverrides(pid, selections, overrides) { const po=overrides[pid]||{}; return selections.map(s=>{ const k=selKey(s); const ov=po[k]; return (ov!==undefined&&ov!=="")?Object.assign({},s,{value:ov,edited:true}):Object.assign({},s,{edited:false}); }); }
+function applyOverrides(pid, selections, overrides) { const po=overrides[pid]||{}; const dl=SELECTION_DEADLINES[pid]||{}; return selections.map(s=>{ const k=selKey(s); const ov=po[k]; const base=(ov!==undefined&&ov!=="")?Object.assign({},s,{value:ov,edited:true}):Object.assign({},s,{edited:false}); if(dl[k]) base.deadline=dl[k]; return base; }); }
+function briefKey(pid,ds) { return "ard_dash_brief::"+pid+"::"+ds; }
+function loadBrief(pid,ds) { try { return JSON.parse(localStorage.getItem(briefKey(pid,ds))||"null"); } catch(e){ return null; } }
+function saveBrief(pid,ds,obj) { try { localStorage.setItem(briefKey(pid,ds),JSON.stringify(obj)); } catch(e){} }
+const TASKS_KEY = "ard_dash_tasks";
+function loadTasksLS() { try { return JSON.parse(localStorage.getItem(TASKS_KEY)||"{}"); } catch(e){ return {}; } }
+function saveTasksLS(o) { try { localStorage.setItem(TASKS_KEY,JSON.stringify(o)); } catch(e){} }
+const CHECKS_KEY = "ard_dash_checks";
+function loadChecksLS() { try { return JSON.parse(localStorage.getItem(CHECKS_KEY)||"{}"); } catch(e){ return {}; } }
+function saveChecksLS(o) { try { localStorage.setItem(CHECKS_KEY,JSON.stringify(o)); } catch(e){} }
+const COS_KEY = "ard_dash_cos";
+function loadCOsLS() { try { return JSON.parse(localStorage.getItem(COS_KEY)||"{}"); } catch(e){ return {}; } }
+function saveCOsLS(o) { try { localStorage.setItem(COS_KEY,JSON.stringify(o)); } catch(e){} }
+
 
 const C = { bg:"#0B0E11",panel:"#12171C",panel2:"#171D24",hair:"#2A333C",ink:"#EAF0F4",mut:"#8B98A4",crit:"#E63946",qc:"#06D6A0",proc:"#7B2CBF",warn:"#FFD60A",accent:"#1F9E3D" };
 
@@ -696,14 +820,38 @@ function Dashboard() {
   const [editingSel,setEditingSel] = useState(null);
   const [selDraft,setSelDraft] = useState("");
   const [selSyncNote,setSelSyncNote] = useState("");
+  const [tasks,setTasks] = useState(loadTasksLS);
+  const [taskDraft,setTaskDraft] = useState("");
+  const [taskNote,setTaskNote] = useState("");
+  const [checks,setChecks] = useState(loadChecksLS);
+  const [expandedHold,setExpandedHold] = useState(null);
+  const [cos,setCos] = useState(loadCOsLS);
+  const [coTitle,setCoTitle] = useState("");
+  const [coAmount,setCoAmount] = useState("");
+  const [coStatus,setCoStatus] = useState("Proposed");
+  const [coNote,setCoNote] = useState("");
+  const [todayAnalysis,setTodayAnalysis] = useState("");
+  const [promoteMsg,setPromoteMsg] = useState("");
   const intelBase = PROJECT_INTEL[project.id];
   const effSelections = intelBase?applyOverrides(project.id,intelBase.selections,selOverrides):null;
   const tbdCount = effSelections?effSelections.filter(s=>s.value.includes("TBD")).length:0;
+  const todayStr = localDateStr(today);
+  const in7Str = (function(){ const d2=new Date(today); d2.setDate(d2.getDate()+7); return localDateStr(d2); })();
+  const dlAll = effSelections?effSelections.filter(s=>s.deadline&&s.value.includes("TBD")):[];
+  const dlOverdue = dlAll.filter(s=>s.deadline<todayStr);
+  const dlSoon = dlAll.filter(s=>s.deadline>=todayStr&&s.deadline<=in7Str);
+  const projTasks = Object.keys(tasks[project.id]||{}).map(k=>tasks[project.id][k]);
+  const openTasks = projTasks.filter(t=>!t.done).sort((a,b)=>(a.createdDate<b.createdDate?-1:1));
+  const doneTasks = projTasks.filter(t=>t.done).sort((a,b)=>(a.doneDate<b.doneDate?1:-1));
+  const projCOs = Object.keys(cos[project.id]||{}).map(k=>cos[project.id][k]).sort((a,b)=>(a.date<b.date?1:-1));
+  const prepHolds = project.holds.filter(e=>e.date>=todayStr&&e.date<=in7Str&&(INSPECTION_CHECKLISTS[project.id]||{})[e.date]);
 
-  function switchProject(id) { setActiveProjectId(id); saveActiveProjectId(id); setBriefing(""); setSubmitted(false); setAnswers({1:"",2:"",3:"",4:""}); setError(""); setIntelChat(loadIntelChat(id)); setEditingSel(null); setSelDraft(""); }
-  useEffect(()=>{ refreshLog(); refreshSelections(); },[syncUrl]);
+  function switchProject(id) { setActiveProjectId(id); saveActiveProjectId(id); setBriefing(""); setSubmitted(false); setAnswers({1:"",2:"",3:"",4:""}); setError(""); setIntelChat(loadIntelChat(id)); setEditingSel(null); setSelDraft(""); setTodayAnalysis(""); setPromoteMsg(""); setExpandedHold(null); }
+  useEffect(()=>{ refreshLog(); refreshSelections(); refreshTasks(); refreshChecks(); refreshCOs(); },[syncUrl]);
   useEffect(()=>{ if(chatEndRef.current) chatEndRef.current.scrollIntoView({behavior:"smooth"}); },[intelChat]);
   useEffect(()=>{ saveIntelChat(activeProjectId,intelChat); },[intelChat,activeProjectId]);
+  useEffect(()=>{ const saved=loadBrief(activeProjectId,localDateStr(today)); if(saved&&saved.briefing){ setBriefing(saved.briefing); setAnswers(saved.answers||{1:"",2:"",3:"",4:""}); setSubmitted(!!saved.submitted); setTodayAnalysis(saved.analysis||""); } },[activeProjectId]);
+  useEffect(()=>{ if(briefing) saveBrief(activeProjectId,localDateStr(today),{briefing:briefing,answers:answers,submitted:submitted,analysis:todayAnalysis}); },[briefing,answers,submitted,todayAnalysis,activeProjectId]);
 
   async function refreshLog() {
     if(!syncUrl){ setLog(loadFallbackLog()); return; }
@@ -737,6 +885,87 @@ function Dashboard() {
       else { setSelSyncNote("Saved on this device \u2014 update the Apps Script to sync selections across devices"); setTimeout(()=>setSelSyncNote(""),6000); }
     }catch(e){ setSelSyncNote("Saved on this device \u2014 couldn\u2019t reach the Sheet"); setTimeout(()=>setSelSyncNote(""),5000); }
   }
+  async function refreshTasks() {
+    if(!syncUrl) return;
+    try{ const res=await fetch(syncUrl+"?action=fetchTasks"); const data=await res.json();
+      if(data&&data.ok&&data.tasks){ const merged=mergeNested(loadTasksLS(),data.tasks); saveTasksLS(merged); setTasks(merged); }
+    }catch(e){}
+  }
+  async function refreshChecks() {
+    if(!syncUrl) return;
+    try{ const res=await fetch(syncUrl+"?action=fetchChecks"); const data=await res.json();
+      if(data&&data.ok&&data.checks){ const merged=mergeNested(loadChecksLS(),data.checks); saveChecksLS(merged); setChecks(merged); }
+    }catch(e){}
+  }
+  async function refreshCOs() {
+    if(!syncUrl) return;
+    try{ const res=await fetch(syncUrl+"?action=fetchCOs"); const data=await res.json();
+      if(data&&data.ok&&data.cos){ const merged=mergeNested(loadCOsLS(),data.cos); saveCOsLS(merged); setCos(merged); }
+    }catch(e){}
+  }
+  function postAction(body, onFail) {
+    if(!syncUrl){ return; }
+    fetch(syncUrl,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify(body)})
+      .then(r=>r.json()).then(d=>{ if(!(d&&d.ok)&&onFail) onFail("Saved on this device \u2014 update the Apps Script to sync across devices"); })
+      .catch(()=>{ if(onFail) onFail("Saved on this device \u2014 couldn\u2019t reach the Sheet"); });
+  }
+  function upsertTaskLocal(t) {
+    const next=Object.assign({},tasks); next[project.id]=Object.assign({},next[project.id]||{}); next[project.id][t.id]=t;
+    setTasks(next); saveTasksLS(next);
+  }
+  function addTask(text, source) {
+    const v=(text||"").trim(); if(!v) return;
+    const t={ id:"t"+Date.now().toString(36)+Math.random().toString(36).slice(2,6), text:v, done:false, source:source||"manual", createdDate:localDateStr(today), doneDate:"" };
+    upsertTaskLocal(t); setTaskDraft("");
+    postAction({action:"setTask",projectId:project.id,task:t}, m=>{ setTaskNote(m); setTimeout(()=>setTaskNote(""),5000); });
+  }
+  function toggleTask(t) {
+    const t2=Object.assign({},t,{done:!t.done,doneDate:!t.done?localDateStr(today):""});
+    upsertTaskLocal(t2);
+    postAction({action:"setTask",projectId:project.id,task:t2}, m=>{ setTaskNote(m); setTimeout(()=>setTaskNote(""),5000); });
+  }
+  function removeTask(t) {
+    if(!window.confirm("Delete this task?")) return;
+    const next=Object.assign({},tasks); next[project.id]=Object.assign({},next[project.id]||{}); delete next[project.id][t.id];
+    setTasks(next); saveTasksLS(next);
+    postAction({action:"deleteTask",projectId:project.id,taskId:t.id}, null);
+  }
+  function promoteActions() {
+    const items=parseActionItems(todayAnalysis||(log[0]&&log[0].analysis)||"");
+    const existing=openTasks.map(t=>t.text);
+    const next=Object.assign({},tasks); next[project.id]=Object.assign({},next[project.id]||{});
+    let added=0;
+    items.forEach((it,ix)=>{ if(existing.indexOf(it)===-1){ const t={ id:"t"+Date.now().toString(36)+Math.random().toString(36).slice(2,6)+ix, text:it, done:false, source:"briefing", createdDate:localDateStr(today), doneDate:"" }; next[project.id][t.id]=t; postAction({action:"setTask",projectId:project.id,task:t},null); added++; } });
+    if(added>0){ setTasks(next); saveTasksLS(next); }
+    setPromoteMsg(added>0?("\u2713 Added "+added+" task"+(added>1?"s":"")+" \u2014 see Tasks tab"):"Already in Tasks");
+    setTimeout(()=>setPromoteMsg(""),4000);
+  }
+  function toggleCheck(itemKey, val) {
+    const next=Object.assign({},checks); next[project.id]=Object.assign({},next[project.id]||{});
+    if(val) next[project.id][itemKey]=true; else delete next[project.id][itemKey];
+    setChecks(next); saveChecksLS(next);
+    postAction({action:"setCheck",projectId:project.id,key:itemKey,checked:!!val}, null);
+  }
+  function addCO() {
+    const t=coTitle.trim(); const a=parseFloat(coAmount);
+    if(!t||!(a>0||a===0)) return;
+    const co={ id:"c"+Date.now().toString(36)+Math.random().toString(36).slice(2,6), title:t, amount:a, status:coStatus, date:localDateStr(today), notes:"" };
+    const next=Object.assign({},cos); next[project.id]=Object.assign({},next[project.id]||{}); next[project.id][co.id]=co;
+    setCos(next); saveCOsLS(next); setCoTitle(""); setCoAmount(""); setCoStatus("Proposed");
+    postAction({action:"setCO",projectId:project.id,co:co}, m=>{ setCoNote(m); setTimeout(()=>setCoNote(""),5000); });
+  }
+  function updateCOStatus(co, st) {
+    const co2=Object.assign({},co,{status:st});
+    const next=Object.assign({},cos); next[project.id]=Object.assign({},next[project.id]||{}); next[project.id][co2.id]=co2;
+    setCos(next); saveCOsLS(next);
+    postAction({action:"setCO",projectId:project.id,co:co2}, m=>{ setCoNote(m); setTimeout(()=>setCoNote(""),5000); });
+  }
+  function removeCO(co) {
+    if(!window.confirm("Delete this change order?")) return;
+    const next=Object.assign({},cos); next[project.id]=Object.assign({},next[project.id]||{}); delete next[project.id][co.id];
+    setCos(next); saveCOsLS(next);
+    postAction({action:"deleteCO",projectId:project.id,coId:co.id}, null);
+  }
   async function pushEntry(entry) {
     if(!syncUrl){ const nl=[entry,...loadFallbackLog().filter(x=>!(x.date===entry.date&&x.projectId===entry.projectId))]; saveFallbackLog(nl); setLog(nl); return; }
     try{ const res=await fetch(syncUrl,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({action:"addEntry",entry})}); const data=await res.json(); if(data.ok) setLog(data.entries||[]); }
@@ -757,7 +986,7 @@ function Dashboard() {
     if(!apiKey){ setError("Add your Claude API key below first."); return; }
     setLoading(true); setError(""); setBriefing(""); setSubmitted(false); setAnswers({1:"",2:"",3:"",4:""});
     try{
-      const res=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json","x-api-key":apiKey,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},body:JSON.stringify({model:"claude-sonnet-4-6",max_tokens:1000,system:buildSystemPrompt(project,today,activePhases,upcomingPhases,todayEvents,effSelections),messages:[{role:"user",content:"Generate today's field briefing."}]})});
+      const res=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json","x-api-key":apiKey,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},body:JSON.stringify({model:"claude-sonnet-4-6",max_tokens:1000,system:buildSystemPrompt(project,today,activePhases,upcomingPhases,todayEvents,effSelections,openTasks),messages:[{role:"user",content:"Generate today's field briefing."}]})});
       const data=await res.json(); if(data.error) throw new Error(data.error.message);
       setBriefing((data.content&&data.content[0]&&data.content[0].text)||"");
     }catch(e){ setError(friendlyApiError(e)); }
@@ -773,7 +1002,7 @@ function Dashboard() {
       const res=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json","x-api-key":apiKey,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},body:JSON.stringify({model:"claude-sonnet-4-6",max_tokens:1000,system:`You are a construction PM for ${project.gc}, ${project.name}, ${project.location}. Today is ${fmt(today)}.`,messages:[{role:"user",content:`Based on today's field briefing and the GC's answers, generate:\n1. A SHORT status summary (2-3 sentences).\n2. ACTION ITEMS — numbered follow-ups with deadlines.\n3. FLAGS — issues or risks surfaced by the answers.\nUnder 300 words. Field-literal.\n\nBRIEFING:\n${briefing}\n\nGC'S ANSWERS:\n${qaText}`}]})});
       const data=await res.json(); const analysis=(data.content&&data.content[0]&&data.content[0].text)||"";
       const entry={projectId:project.id,projectName:project.name,date:localDateStr(today),dateLabel:fmt(today),activePhases:activePhases.map(p=>p.label),qa:questions.map((q,i)=>({q,a:answers[i+1]||""})),analysis,briefing};
-      await pushEntry(entry); setSubmitted(true);
+      await pushEntry(entry); setSubmitted(true); setTodayAnalysis(analysis);
     }catch(e){ setError(friendlyApiError(e)); }
     setLoading(false);
   }
@@ -830,6 +1059,35 @@ function Dashboard() {
         h("span",{style:{color:e.color,fontWeight:700,lineHeight:1.35}},e.label)
       ))
     ),
+    (dlOverdue.length>0||dlSoon.length>0)&&h("div",{onClick:()=>{setTab("intel");setIntelTab("selections");},style:{background:(dlOverdue.length?"#E6394618":"#FFD60A18"),border:`1px solid ${dlOverdue.length?C.crit:C.warn}`,borderRadius:8,padding:"9px 14px",fontSize:12,fontWeight:700,color:dlOverdue.length?C.crit:C.warn,marginBottom:8,cursor:"pointer",fontFamily:"'Space Mono',monospace",lineHeight:1.4}},
+      "\u26A0 "+(dlOverdue.length?(dlOverdue.length+" selection"+(dlOverdue.length>1?"s":"")+" overdue"):"")+((dlOverdue.length&&dlSoon.length)?" \u00b7 ":"")+(dlSoon.length?(dlSoon.length+" due within 7 days"):"")+" \u2014 tap to review"
+    ),
+    prepHolds.length>0&&h("div",{style:{background:C.panel2,border:`1px solid ${C.crit}`,borderRadius:8,padding:"10px 14px",marginBottom:12}},
+      h("div",{style:{fontFamily:"'Space Mono',monospace",fontSize:10,fontWeight:700,color:C.crit,letterSpacing:"0.1em",marginBottom:7}},"INSPECTION PREP"),
+      ...prepHolds.map((e,i)=>{
+        const items=(INSPECTION_CHECKLISTS[project.id]||{})[e.date]||[];
+        const isOpen=expandedHold===e.date;
+        const doneCt=items.filter((it,ix)=>checks[project.id]&&checks[project.id][e.date+"::"+ix]).length;
+        return h("div",{key:i,style:{marginBottom:isOpen?12:7}},
+          h("div",{onClick:()=>setExpandedHold(isOpen?null:e.date),style:{display:"flex",justifyContent:"space-between",alignItems:"baseline",cursor:"pointer",gap:10}},
+            h("div",{style:{fontSize:12,fontWeight:700,color:C.ink,lineHeight:1.35}},
+              h("span",{style:{fontFamily:"'Space Mono',monospace",color:C.mut,marginRight:8}},shortDate(e.date)),
+              e.label.replace(/^[^A-Za-z]*HOLD[^A-Za-z]*/,"")
+            ),
+            h("span",{style:{fontFamily:"'Space Mono',monospace",fontSize:10,color:doneCt===items.length?C.qc:C.mut,flexShrink:0}},doneCt+"/"+items.length+(isOpen?" \u25B4":" \u25BE"))
+          ),
+          isOpen&&h("div",{style:{marginTop:7}},
+            ...items.map((it,ix)=>{
+              const ck=!!(checks[project.id]&&checks[project.id][e.date+"::"+ix]);
+              return h("div",{key:ix,onClick:()=>toggleCheck(e.date+"::"+ix,!ck),style:{display:"flex",gap:9,alignItems:"flex-start",padding:"5px 0",cursor:"pointer"}},
+                h("span",{style:{width:16,height:16,borderRadius:4,flexShrink:0,marginTop:1,border:`1.5px solid ${ck?C.qc:C.hair}`,background:ck?C.qc:"transparent",color:"#0B0E11",fontSize:11,fontWeight:900,textAlign:"center",lineHeight:"15px"}},ck?"\u2713":""),
+                h("span",{style:{fontSize:12.5,color:ck?C.mut:C.ink,textDecoration:ck?"line-through":"none",lineHeight:1.4}},it)
+              );
+            })
+          )
+        );
+      })
+    ),
     (!briefing&&!loading)&&h("button",{onClick:fetchBriefing,disabled:!apiKey,style:{width:"100%",padding:"14px",background:apiKey?"#1F9E3D":C.panel2,border:apiKey?"none":`1px solid ${C.hair}`,borderRadius:8,color:apiKey?"#fff":C.mut,fontSize:15,fontWeight:800,cursor:apiKey?"pointer":"not-allowed",marginTop:8,letterSpacing:"0.02em"}},apiKey?"Generate Today's Field Briefing":"Add your API key below to begin"),
     loading&&h("div",{style:{textAlign:"center",padding:"32px",color:C.mut,fontFamily:"'Space Mono',monospace",fontSize:12}},h("span",{className:"spin",style:{fontSize:24,display:"inline-block"}},"↻")," Working…"),
     error&&h("div",{style:{background:"#E6394618",border:"1px solid #E63946",borderRadius:8,padding:"12px 16px",color:"#E63946",fontSize:13,marginTop:8}},error),
@@ -841,9 +1099,10 @@ function Dashboard() {
       ...renderBriefing(briefing),
       !submitted?h("button",{onClick:submitAnswers,disabled:loading,style:{width:"100%",padding:"13px",background:"#0066FF",border:"none",borderRadius:8,color:"#fff",fontSize:14,fontWeight:800,cursor:"pointer",marginTop:4,opacity:loading?0.5:1}},"Submit Answers → Generate Action Items"):h("div",null,
         h("div",{style:{background:"#06D6A018",border:"1px solid #06D6A0",borderRadius:8,padding:"12px 16px",color:"#06D6A0",fontSize:12,fontFamily:"'Space Mono',monospace",fontWeight:700,marginBottom:12,textAlign:"center"}},"✓ Answers logged — see Analysis below"),
-        (log[0]&&log[0].analysis)&&h("div",{style:{background:C.panel2,border:`1px solid ${C.hair}`,borderRadius:8,padding:"16px"}},
+        (todayAnalysis||(log[0]&&log[0].analysis))&&h("div",{style:{background:C.panel2,border:`1px solid ${C.hair}`,borderRadius:8,padding:"16px"}},
           h("div",{style:{fontFamily:"'Space Mono',monospace",fontSize:11,fontWeight:700,color:"#0066FF",letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:10}},"Action Items & Flags"),
-          h("div",{style:{fontSize:13,color:C.ink,lineHeight:1.7,whiteSpace:"pre-wrap"}},log[0].analysis)
+          h("div",{style:{fontSize:13,color:C.ink,lineHeight:1.7,whiteSpace:"pre-wrap"}},todayAnalysis||(log[0]&&log[0].analysis)),
+          parseActionItems(todayAnalysis||(log[0]&&log[0].analysis)||"").length>0&&h("button",{onClick:promoteActions,style:{marginTop:12,width:"100%",padding:"9px",background:"none",border:"1px solid #0066FF",borderRadius:7,color:"#0066FF",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"'Space Mono',monospace"}},promoteMsg||("Add "+parseActionItems(todayAnalysis||(log[0]&&log[0].analysis)||"").length+" action items to Tasks \u2192"))
         )
       )
     )
@@ -854,7 +1113,7 @@ function Dashboard() {
   const intelTab_ = h("div",{style:{display:"flex",flexDirection:"column",height:"100%"}},
     // sub-tabs
     h("div",{style:{display:"flex",gap:6,marginBottom:16}},
-      [["ask","Ask Anything"],["selections","Selections"],["scope","Scope Notes"]].map(([id,label])=>
+      [["ask","Ask"],["selections","Selections"],["scope","Scope"],["cos","COs"]].map(([id,label])=>
         h("button",{key:id,onClick:()=>setIntelTab(id),style:{flex:1,padding:"8px 4px",background:intelTab===id?"#0066FF":C.panel2,border:`1px solid ${intelTab===id?"#0066FF":C.hair}`,borderRadius:7,color:intelTab===id?"#fff":C.mut,fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"'Space Mono',monospace"}},label)
       )
     ),
@@ -893,7 +1152,8 @@ function Dashboard() {
                 h("div",{style:{color:C.mut,minWidth:130,flexShrink:0}},s.item),
                 !isEditing&&h("div",{style:{flex:1,color:s.value.includes("TBD")?"#FFD60A":C.ink,fontWeight:s.value.includes("TBD")?700:400,lineHeight:1.4}},
                   s.value,
-                  s.edited&&h("span",{style:{marginLeft:7,fontSize:9,color:C.qc,fontFamily:"'Space Mono',monospace",fontWeight:700}},"EDITED")
+                  s.edited&&h("span",{style:{marginLeft:7,fontSize:9,color:C.qc,fontFamily:"'Space Mono',monospace",fontWeight:700}},"EDITED"),
+                  s.deadline&&s.value.includes("TBD")&&h("span",{style:{marginLeft:7,fontSize:9,fontFamily:"'Space Mono',monospace",fontWeight:700,color:(s.deadline<todayStr?C.crit:C.warn)}},"\u26A0 needed by "+shortDate(s.deadline))
                 ),
                 !isEditing&&h("button",{onClick:()=>{setEditingSel(k);setSelDraft(s.value);},style:{background:"none",border:`1px solid ${C.hair}`,borderRadius:5,color:C.mut,fontSize:10,padding:"3px 10px",cursor:"pointer",flexShrink:0,fontFamily:"'Space Mono',monospace"}},"Edit")
               ),
@@ -916,6 +1176,43 @@ function Dashboard() {
         h("div",{style:{fontFamily:"'Space Mono',monospace",fontSize:10,fontWeight:700,color:"#0066FF",letterSpacing:"0.08em",textTransform:"uppercase",marginBottom:6}},s.area),
         h("div",{style:{fontSize:13,color:C.ink,lineHeight:1.6}},s.note)
       ))
+    ),
+    // CHANGE ORDERS sub-tab
+    intelTab==="cos"&&h("div",null,
+      h("div",{style:{background:C.panel2,border:`1px solid ${C.hair}`,borderRadius:8,padding:"12px 14px",marginBottom:14}},
+        h("div",{style:{fontFamily:"'Space Mono',monospace",fontSize:10,fontWeight:700,color:C.mut,letterSpacing:"0.1em",marginBottom:8}},"NEW CHANGE ORDER"),
+        h("input",{type:"text",value:coTitle,onChange:e=>setCoTitle(e.target.value),placeholder:"Description (e.g. Add 2 can lights \u2014 living room)",style:{width:"100%",background:C.bg,border:`1px solid ${C.hair}`,borderRadius:6,color:C.ink,fontSize:16,padding:"9px 11px",outline:"none",boxSizing:"border-box",marginBottom:8}}),
+        h("div",{style:{display:"flex",gap:8}},
+          h("input",{type:"number",inputMode:"decimal",value:coAmount,onChange:e=>setCoAmount(e.target.value),placeholder:"Amount $",style:{flex:1,minWidth:0,background:C.bg,border:`1px solid ${C.hair}`,borderRadius:6,color:C.ink,fontSize:16,padding:"9px 11px",outline:"none",boxSizing:"border-box"}}),
+          h("select",{value:coStatus,onChange:e=>setCoStatus(e.target.value),style:{flex:1,minWidth:0,background:C.bg,border:`1px solid ${C.hair}`,borderRadius:6,color:C.ink,fontSize:14,padding:"9px 8px",outline:"none"}},["Proposed","Approved","Invoiced","Paid"].map(s=>h("option",{key:s,value:s},s))),
+          h("button",{onClick:addCO,disabled:!coTitle.trim()||coAmount==="",style:{background:"#0066FF",border:"none",borderRadius:6,color:"#fff",fontWeight:800,fontSize:13,padding:"0 16px",cursor:(coTitle.trim()&&coAmount!=="")?"pointer":"not-allowed",opacity:(coTitle.trim()&&coAmount!=="")?1:0.4,flexShrink:0}},"Add")
+        )
+      ),
+      coNote&&h("div",{style:{fontFamily:"'Space Mono',monospace",fontSize:11,color:C.qc,marginBottom:10}},coNote),
+      projCOs.length===0&&h("div",{style:{textAlign:"center",padding:"28px 0",color:C.mut,fontFamily:"'Space Mono',monospace",fontSize:12}},"No change orders logged for this project."),
+      ...projCOs.map(co=>h("div",{key:co.id,style:{background:C.panel2,border:`1px solid ${C.hair}`,borderRadius:8,padding:"11px 13px",marginBottom:8}},
+        h("div",{style:{display:"flex",justifyContent:"space-between",gap:10,alignItems:"baseline"}},
+          h("div",{style:{fontSize:13.5,color:C.ink,fontWeight:700,lineHeight:1.4,flex:1}},co.title),
+          h("div",{style:{fontFamily:"'Space Mono',monospace",fontSize:13,fontWeight:700,color:C.ink,flexShrink:0}},fmtMoney(co.amount))
+        ),
+        h("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginTop:7,gap:10}},
+          h("select",{value:co.status,onChange:e=>updateCOStatus(co,e.target.value),style:{background:C.bg,border:`1px solid ${coStatusColor(co.status)}`,borderRadius:6,color:coStatusColor(co.status),fontSize:11,fontWeight:700,padding:"4px 8px",outline:"none",fontFamily:"'Space Mono',monospace"}},["Proposed","Approved","Invoiced","Paid"].map(s=>h("option",{key:s,value:s},s))),
+          h("div",{style:{fontFamily:"'Space Mono',monospace",fontSize:9,color:C.mut}},co.date||""),
+          h("button",{onClick:()=>removeCO(co),style:{background:"none",border:"none",color:C.mut,fontSize:15,cursor:"pointer",padding:"0 2px"}},"\u00d7")
+        )
+      )),
+      projCOs.length>0&&h("div",{style:{background:C.bg,border:`1px solid ${C.hair}`,borderRadius:8,padding:"11px 13px",marginTop:6}},
+        h("div",{style:{fontFamily:"'Space Mono',monospace",fontSize:10,fontWeight:700,color:C.mut,letterSpacing:"0.1em",marginBottom:7}},"TOTALS"),
+        ...["Proposed","Approved","Invoiced","Paid"].map(st=>{
+          const tt=projCOs.filter(c=>c.status===st).reduce((a,c)=>a+(parseFloat(c.amount)||0),0);
+          return tt>0?h("div",{key:st,style:{display:"flex",justifyContent:"space-between",fontSize:12,marginBottom:4}},h("span",{style:{color:coStatusColor(st),fontFamily:"'Space Mono',monospace"}},st),h("span",{style:{fontFamily:"'Space Mono',monospace",color:C.ink}},fmtMoney(tt))):null;
+        }),
+        project.contractBase&&h("div",{style:{display:"flex",justifyContent:"space-between",fontSize:12,marginTop:7,paddingTop:7,borderTop:`1px solid ${C.hair}`}},
+          h("span",{style:{color:C.mut}},"Contract + approved COs"),
+          h("span",{style:{fontFamily:"'Space Mono',monospace",color:C.qc,fontWeight:700}},fmtMoney(project.contractBase+projCOs.filter(c=>c.status==="Approved"||c.status==="Invoiced"||c.status==="Paid").reduce((a,c)=>a+(parseFloat(c.amount)||0),0)))
+        ),
+        !project.contractBase&&h("div",{style:{fontSize:10,color:C.mut,marginTop:7,paddingTop:7,borderTop:`1px solid ${C.hair}`,fontFamily:"'Space Mono',monospace",lineHeight:1.5}},"Contract base not on file (payment schedule missing) \u2014 totals shown are CO amounts only")
+      )
     )
   );
 
@@ -936,6 +1233,30 @@ function Dashboard() {
     )),
     log.length>0&&h("button",{onClick:clearAllLog,style:{width:"100%",padding:"9px",background:"transparent",border:`1px solid ${C.crit}`,borderRadius:7,color:C.crit,fontSize:12,cursor:"pointer",fontFamily:"'Space Mono',monospace",marginTop:8}},"Clear log (all projects)")
   );
+
+  // \u2500\u2500 TASKS TAB \u2500\u2500
+  function taskRow(t) {
+    return h("div",{key:t.id,style:{display:"flex",gap:10,alignItems:"flex-start",background:C.panel2,border:`1px solid ${C.hair}`,borderRadius:8,padding:"10px 12px",marginBottom:8}},
+      h("span",{onClick:()=>toggleTask(t),style:{width:18,height:18,borderRadius:5,flexShrink:0,marginTop:1,cursor:"pointer",border:`1.5px solid ${t.done?C.qc:C.hair}`,background:t.done?C.qc:"transparent",color:"#0B0E11",fontSize:12,fontWeight:900,textAlign:"center",lineHeight:"17px"}},t.done?"\u2713":""),
+      h("div",{style:{flex:1}},
+        h("div",{style:{fontSize:13.5,color:t.done?C.mut:C.ink,textDecoration:t.done?"line-through":"none",lineHeight:1.45}},t.text),
+        h("div",{style:{fontFamily:"'Space Mono',monospace",fontSize:9,color:C.mut,marginTop:3}},(t.source==="briefing"?"from briefing \u00b7 ":"")+(t.done?("done "+(t.doneDate||"")):("added "+(t.createdDate||""))))
+      ),
+      h("button",{onClick:()=>removeTask(t),style:{background:"none",border:"none",color:C.mut,fontSize:15,cursor:"pointer",padding:"0 2px",flexShrink:0}},"\u00d7")
+    );
+  }
+  const tasksTab_ = h("div",null,
+    h("div",{style:{display:"flex",gap:8,marginBottom:14}},
+      h("input",{type:"text",value:taskDraft,onChange:e=>setTaskDraft(e.target.value),onKeyDown:e=>{if(e.key==="Enter"){addTask(taskDraft);}},placeholder:"Add a task\u2026",style:{flex:1,background:C.panel2,border:`1px solid ${C.hair}`,borderRadius:8,color:C.ink,fontSize:16,padding:"10px 13px",outline:"none",boxSizing:"border-box"}}),
+      h("button",{onClick:()=>addTask(taskDraft),disabled:!taskDraft.trim(),style:{background:"#1F9E3D",border:"none",borderRadius:8,color:"#fff",fontWeight:800,fontSize:13,padding:"0 16px",cursor:taskDraft.trim()?"pointer":"not-allowed",opacity:taskDraft.trim()?1:0.4}},"Add")
+    ),
+    taskNote&&h("div",{style:{fontFamily:"'Space Mono',monospace",fontSize:11,color:C.qc,marginBottom:10}},taskNote),
+    (openTasks.length===0&&doneTasks.length===0)&&h("div",{style:{textAlign:"center",padding:"40px 0",color:C.mut,fontFamily:"'Space Mono',monospace",fontSize:12,lineHeight:1.7}},"No tasks yet \u2014 add one above, or submit a briefing and promote its action items."),
+    ...openTasks.map(t=>taskRow(t)),
+    doneTasks.length>0&&h("div",{style:{fontFamily:"'Space Mono',monospace",fontSize:10,fontWeight:700,color:C.mut,letterSpacing:"0.1em",margin:"16px 0 6px"}},"DONE ("+doneTasks.length+")"),
+    ...doneTasks.map(t=>taskRow(t))
+  );
+
 
   // ── SETTINGS PANEL ────────────────────────────────────────────────────────
   const settingsPanel = h("div",{style:{marginTop:16,paddingTop:14,borderTop:`1px solid ${C.hair}`}},
@@ -961,7 +1282,7 @@ function Dashboard() {
   );
 
   // ── ROOT ──────────────────────────────────────────────────────────────────
-  const tabs = [["today","Today's Briefing"],["intel","Project Intel"],["log","Field Log"]];
+  const tabs = [["today","Today"],["tasks","Tasks"],["intel","Intel"],["log","Log"]];
   return h("div",{style:{background:C.bg,minHeight:"100vh",fontFamily:"'Archivo',sans-serif",color:C.ink}},
     h("div",{style:{background:C.panel,borderBottom:`1px solid ${C.hair}`,padding:"16px 20px"}},
       h("div",{style:{maxWidth:680,margin:"0 auto"}},
@@ -978,15 +1299,16 @@ function Dashboard() {
       )
     ),
     h("div",{style:{background:C.panel,borderBottom:`1px solid ${C.hair}`}},
-      h("div",{style:{maxWidth:680,margin:"0 auto",display:"flex"}},
+      h("div",{style:{maxWidth:680,margin:"0 auto",display:"flex",overflowX:"auto"}},
         tabs.map(([id,label])=>h("button",{key:id,onClick:()=>setTab(id),style:{padding:"11px 14px",background:"none",border:"none",cursor:"pointer",fontFamily:"'Space Mono',monospace",fontSize:11,fontWeight:700,color:tab===id?C.ink:C.mut,borderBottom:tab===id?"2px solid #1F9E3D":"2px solid transparent",whiteSpace:"nowrap"}},
           label,
           id==="log"&&log.length>0&&h("span",{style:{marginLeft:7,background:"#1F9E3D",color:"#fff",borderRadius:10,padding:"1px 7px",fontSize:10}},log.length),
-          id==="intel"&&tbdCount>0&&h("span",{style:{marginLeft:7,background:"#FFD60A",color:"#101417",borderRadius:10,padding:"1px 7px",fontSize:10,fontWeight:700}},tbdCount)
+          id==="intel"&&tbdCount>0&&h("span",{style:{marginLeft:7,background:"#FFD60A",color:"#101417",borderRadius:10,padding:"1px 7px",fontSize:10,fontWeight:700}},tbdCount),
+          id==="tasks"&&openTasks.length>0&&h("span",{style:{marginLeft:7,background:"#0066FF",color:"#fff",borderRadius:10,padding:"1px 7px",fontSize:10,fontWeight:700}},openTasks.length)
         ))
       )
     ),
-    h("div",{style:{maxWidth:680,margin:"0 auto",padding:"24px 20px"}},tab==="today"?todayTab:tab==="intel"?intelTab_:logTab_),
+    h("div",{style:{maxWidth:680,margin:"0 auto",padding:"24px 20px"}},tab==="today"?todayTab:tab==="tasks"?tasksTab_:tab==="intel"?intelTab_:logTab_),
     h("div",{style:{textAlign:"center",padding:"20px",fontFamily:"'Space Mono',monospace",fontSize:10,color:C.mut,borderTop:`1px solid ${C.hair}`,marginTop:20}},"CSLB B/C-33 #1039947 · Osmar@advremodel.com · 760-485-7076 · Schedules tentative — subject to AHJ, selections, long-lead delivery · "+APP_VERSION)
   );
 }
