@@ -331,7 +331,7 @@ function(a,b,c){if(!Vd(b))throw Error(n(200));return Wd(null,a,b,!1,c)};Q.unmoun
 
 <script>
 const { useState, useEffect, useRef } = React;
-const APP_VERSION = "v6.0";
+const APP_VERSION = "v6.1";
 const h = React.createElement;
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -657,7 +657,8 @@ function getTodayEvents(project, today) { const ds = localDateStr(today); return
 function getUpcomingEvents(project, today, days) { days=days||7; const ds=localDateStr(today); const horizon=new Date(today); horizon.setDate(horizon.getDate()+days); const hs=localDateStr(horizon); return [].concat(project.holds,project.procurement,project.milestones).filter(function(e){return e.date>ds&&e.date<=hs;}).sort(function(a,b){return a.date<b.date?-1:1;}); }
 function projectProgress(project, today) { const start=toDate(project.startDate),end=toDate(project.endDate); const total=daysBetween(start,end); const elapsed=Math.max(0,Math.min(total,daysBetween(start,today))); return Math.round(elapsed/total*100); }
 
-function buildSystemPrompt(project, today, activePhases, upcomingPhases, events, effSelections, openTasks) {
+function buildSystemPrompt(project, today, activePhases, upcomingPhases, events, effSelections, openTasks, recentNotes) {
+  const noteText = (recentNotes&&recentNotes.length)? recentNotes.slice(0,10).map(n=>"["+n.date+"] "+n.text).join("\n") : "None";
   const taskText = (openTasks&&openTasks.length)? openTasks.map(t=>"- "+t.text).join("\n") : "None";
   const dlSel = effSelections? effSelections.filter(s=>s.deadline&&s.value.includes("TBD")) : [];
   const dlText = dlSel.length? dlSel.map(s=>"- "+s.category+"/"+s.item+": needed by "+s.deadline).join("\n") : "None";
@@ -679,6 +680,9 @@ ${taskText}
 UNRESOLVED SELECTIONS WITH DEADLINES:
 ${dlText}
 
+RECENT FIELD NOTES (last 7 days \u2014 factor into today's plan):
+${noteText}
+
 MATERIAL SELECTIONS:
 ${selectionsText}
 
@@ -697,7 +701,8 @@ Exactly 4 numbered questions for the GC — specific, answerable in 1-3 sentence
 Under 450 words. Direct, field-literal, no fluff.`;
 }
 
-function buildIntelPrompt(project, question, effSelections) {
+function buildIntelPrompt(project, question, effSelections, projNotes) {
+  const notesText = (projNotes&&projNotes.length)? projNotes.slice(0,60).map(n=>"["+n.date+"] "+n.text).join("\n") : "No field notes yet.";
   const intel = PROJECT_INTEL[project.id];
   const selList = effSelections || (intel ? intel.selections : null);
   const selectionsText = selList ? selList.map(s=>`${s.category} — ${s.item}: ${s.value}`).join("\n") : "No selections data.";
@@ -717,6 +722,9 @@ ${project.phases.map(p=>`${p.label}: ${p.start} to ${p.end}`).join("\n")}
 
 OPEN ITEMS:
 ${project.openItems.join("\n")}
+
+FIELD NOTES (dated, newest first \u2014 these are the GC's own jobsite notes; treat them as ground truth for what happened on site):
+${notesText}
 
 Answer the GC's question below clearly and concisely. If the question is about a quantity or material that's confirmed, state it directly. If it's TBD, say so and note what's needed to resolve it. Field-literal language, no fluff, under 150 words unless the question genuinely requires more.`;
 }
@@ -771,6 +779,9 @@ function loadChecksLS() { try { return JSON.parse(localStorage.getItem(CHECKS_KE
 function saveChecksLS(o) { try { localStorage.setItem(CHECKS_KEY,JSON.stringify(o)); } catch(e){} }
 const COS_KEY = "ard_dash_cos";
 function loadCOsLS() { try { return JSON.parse(localStorage.getItem(COS_KEY)||"{}"); } catch(e){ return {}; } }
+const NOTES_KEY = "ard_dash_notes";
+function loadNotesLS() { try { return JSON.parse(localStorage.getItem(NOTES_KEY)||"{}"); } catch(e){ return {}; } }
+function saveNotesLS(o) { try { localStorage.setItem(NOTES_KEY,JSON.stringify(o)); } catch(e){} }
 function saveCOsLS(o) { try { localStorage.setItem(COS_KEY,JSON.stringify(o)); } catch(e){} }
 
 
@@ -832,6 +843,9 @@ function Dashboard() {
   const [coNote,setCoNote] = useState("");
   const [todayAnalysis,setTodayAnalysis] = useState("");
   const [promoteMsg,setPromoteMsg] = useState("");
+  const [notes,setNotes] = useState(loadNotesLS);
+  const [noteDraft,setNoteDraft] = useState("");
+  const [noteMsg,setNoteMsg] = useState("");
   const intelBase = PROJECT_INTEL[project.id];
   const effSelections = intelBase?applyOverrides(project.id,intelBase.selections,selOverrides):null;
   const tbdCount = effSelections?effSelections.filter(s=>s.value.includes("TBD")).length:0;
@@ -844,10 +858,11 @@ function Dashboard() {
   const openTasks = projTasks.filter(t=>!t.done).sort((a,b)=>(a.createdDate<b.createdDate?-1:1));
   const doneTasks = projTasks.filter(t=>t.done).sort((a,b)=>(a.doneDate<b.doneDate?1:-1));
   const projCOs = Object.keys(cos[project.id]||{}).map(k=>cos[project.id][k]).sort((a,b)=>(a.date<b.date?1:-1));
+  const projNotes = Object.keys(notes[project.id]||{}).map(k=>notes[project.id][k]).sort((a,b)=>(a.createdAt<b.createdAt?1:-1));
   const prepHolds = project.holds.filter(e=>e.date>=todayStr&&e.date<=in7Str&&(INSPECTION_CHECKLISTS[project.id]||{})[e.date]);
 
   function switchProject(id) { setActiveProjectId(id); saveActiveProjectId(id); setBriefing(""); setSubmitted(false); setAnswers({1:"",2:"",3:"",4:""}); setError(""); setIntelChat(loadIntelChat(id)); setEditingSel(null); setSelDraft(""); setTodayAnalysis(""); setPromoteMsg(""); setExpandedHold(null); }
-  useEffect(()=>{ refreshLog(); refreshSelections(); refreshTasks(); refreshChecks(); refreshCOs(); },[syncUrl]);
+  useEffect(()=>{ refreshLog(); refreshSelections(); refreshTasks(); refreshChecks(); refreshCOs(); refreshNotes(); },[syncUrl]);
   useEffect(()=>{ if(chatEndRef.current) chatEndRef.current.scrollIntoView({behavior:"smooth"}); },[intelChat]);
   useEffect(()=>{ saveIntelChat(activeProjectId,intelChat); },[intelChat,activeProjectId]);
   useEffect(()=>{ const saved=loadBrief(activeProjectId,localDateStr(today)); if(saved&&saved.briefing){ setBriefing(saved.briefing); setAnswers(saved.answers||{1:"",2:"",3:"",4:""}); setSubmitted(!!saved.submitted); setTodayAnalysis(saved.analysis||""); } },[activeProjectId]);
@@ -966,6 +981,25 @@ function Dashboard() {
     setCos(next); saveCOsLS(next);
     postAction({action:"deleteCO",projectId:project.id,coId:co.id}, null);
   }
+  async function refreshNotes() {
+    if(!syncUrl) return;
+    try{ const res=await fetch(syncUrl+"?action=fetchNotes"); const data=await res.json();
+      if(data&&data.ok&&data.notes){ const merged=mergeNested(loadNotesLS(),data.notes); saveNotesLS(merged); setNotes(merged); }
+    }catch(e){}
+  }
+  function addNote() {
+    const v=noteDraft.trim(); if(!v) return;
+    const n={ id:"n"+Date.now().toString(36)+Math.random().toString(36).slice(2,6), text:v, date:localDateStr(today), createdAt:Date.now() };
+    const next=Object.assign({},notes); next[project.id]=Object.assign({},next[project.id]||{}); next[project.id][n.id]=n;
+    setNotes(next); saveNotesLS(next); setNoteDraft("");
+    postAction({action:"setNote",projectId:project.id,note:n}, m=>{ setNoteMsg(m); setTimeout(()=>setNoteMsg(""),5000); });
+  }
+  function removeNote(n) {
+    if(!window.confirm("Delete this note?")) return;
+    const next=Object.assign({},notes); next[project.id]=Object.assign({},next[project.id]||{}); delete next[project.id][n.id];
+    setNotes(next); saveNotesLS(next);
+    postAction({action:"deleteNote",projectId:project.id,noteId:n.id}, null);
+  }
   async function pushEntry(entry) {
     if(!syncUrl){ const nl=[entry,...loadFallbackLog().filter(x=>!(x.date===entry.date&&x.projectId===entry.projectId))]; saveFallbackLog(nl); setLog(nl); return; }
     try{ const res=await fetch(syncUrl,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({action:"addEntry",entry})}); const data=await res.json(); if(data.ok) setLog(data.entries||[]); }
@@ -986,7 +1020,7 @@ function Dashboard() {
     if(!apiKey){ setError("Add your Claude API key below first."); return; }
     setLoading(true); setError(""); setBriefing(""); setSubmitted(false); setAnswers({1:"",2:"",3:"",4:""});
     try{
-      const res=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json","x-api-key":apiKey,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},body:JSON.stringify({model:"claude-sonnet-4-6",max_tokens:1000,system:buildSystemPrompt(project,today,activePhases,upcomingPhases,todayEvents,effSelections,openTasks),messages:[{role:"user",content:"Generate today's field briefing."}]})});
+      const res=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json","x-api-key":apiKey,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},body:JSON.stringify({model:"claude-sonnet-4-6",max_tokens:1000,system:buildSystemPrompt(project,today,activePhases,upcomingPhases,todayEvents,effSelections,openTasks,projNotes.filter(n=>{const d7=new Date(today);d7.setDate(d7.getDate()-7);return n.date>=localDateStr(d7);})),messages:[{role:"user",content:"Generate today's field briefing."}]})});
       const data=await res.json(); if(data.error) throw new Error(data.error.message);
       setBriefing((data.content&&data.content[0]&&data.content[0].text)||"");
     }catch(e){ setError(friendlyApiError(e)); }
@@ -1012,7 +1046,7 @@ function Dashboard() {
     const q=intelQuestion.trim(); if(!q) return;
     setIntelChat(c=>[...c,{role:"user",text:q}]); setIntelQuestion(""); setIntelLoading(true);
     try{
-      const res=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json","x-api-key":apiKey,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},body:JSON.stringify({model:"claude-sonnet-4-6",max_tokens:600,system:buildIntelPrompt(project,q,effSelections),messages:[{role:"user",content:q}]})});
+      const res=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json","x-api-key":apiKey,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},body:JSON.stringify({model:"claude-sonnet-4-6",max_tokens:600,system:buildIntelPrompt(project,q,effSelections,projNotes),messages:[{role:"user",content:q}]})});
       const data=await res.json(); if(data.error) throw new Error(data.error.message);
       const answer=(data.content&&data.content[0]&&data.content[0].text)||"";
       setIntelChat(c=>[...c,{role:"assistant",text:answer}]);
@@ -1113,7 +1147,7 @@ function Dashboard() {
   const intelTab_ = h("div",{style:{display:"flex",flexDirection:"column",height:"100%"}},
     // sub-tabs
     h("div",{style:{display:"flex",gap:6,marginBottom:16}},
-      [["ask","Ask"],["selections","Selections"],["scope","Scope"],["cos","COs"]].map(([id,label])=>
+      [["ask","Ask"],["selections","Selections"],["scope","Scope"],["cos","COs"],["notes","Notes"]].map(([id,label])=>
         h("button",{key:id,onClick:()=>setIntelTab(id),style:{flex:1,padding:"8px 4px",background:intelTab===id?"#0066FF":C.panel2,border:`1px solid ${intelTab===id?"#0066FF":C.hair}`,borderRadius:7,color:intelTab===id?"#fff":C.mut,fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"'Space Mono',monospace"}},label)
       )
     ),
@@ -1213,6 +1247,23 @@ function Dashboard() {
         ),
         !project.contractBase&&h("div",{style:{fontSize:10,color:C.mut,marginTop:7,paddingTop:7,borderTop:`1px solid ${C.hair}`,fontFamily:"'Space Mono',monospace",lineHeight:1.5}},"Contract base not on file (payment schedule missing) \u2014 totals shown are CO amounts only")
       )
+    ),
+    // NOTES sub-tab
+    intelTab==="notes"&&h("div",null,
+      h("div",{style:{fontFamily:"'Space Mono',monospace",fontSize:10,color:C.mut,marginBottom:10,lineHeight:1.5}},"Jot anything \u2014 sub conversations, field conditions, owner decisions, measurements. Notes feed Ask Anything and the daily briefing, and sync to your Sheet."),
+      h("div",{style:{marginBottom:14}},
+        h("textarea",{value:noteDraft,onChange:e=>setNoteDraft(e.target.value),placeholder:"e.g. Plumber says drain relocation needs 2\u2033 more depth than plan \u2014 owner OK'd moving wall 3\u2033\u2026",style:{width:"100%",background:C.panel2,border:`1px solid ${C.hair}`,borderRadius:8,color:C.ink,fontSize:16,padding:"10px 13px",resize:"vertical",minHeight:70,outline:"none",boxSizing:"border-box"}}),
+        h("button",{onClick:addNote,disabled:!noteDraft.trim(),style:{marginTop:8,width:"100%",padding:"11px",background:noteDraft.trim()?"#1F9E3D":C.panel2,border:noteDraft.trim()?"none":`1px solid ${C.hair}`,borderRadius:8,color:noteDraft.trim()?"#fff":C.mut,fontSize:13,fontWeight:800,cursor:noteDraft.trim()?"pointer":"not-allowed"}},"Add Note")
+      ),
+      noteMsg&&h("div",{style:{fontFamily:"'Space Mono',monospace",fontSize:11,color:C.qc,marginBottom:10}},noteMsg),
+      projNotes.length===0&&h("div",{style:{textAlign:"center",padding:"28px 0",color:C.mut,fontFamily:"'Space Mono',monospace",fontSize:12}},"No notes yet for this project."),
+      ...projNotes.map(n=>h("div",{key:n.id,style:{background:C.panel2,border:`1px solid ${C.hair}`,borderRadius:8,padding:"11px 13px",marginBottom:8}},
+        h("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"baseline",gap:10,marginBottom:5}},
+          h("div",{style:{fontFamily:"'Space Mono',monospace",fontSize:10,fontWeight:700,color:C.accent}},shortDate(n.date)),
+          h("button",{onClick:()=>removeNote(n),style:{background:"none",border:"none",color:C.mut,fontSize:15,cursor:"pointer",padding:"0 2px",flexShrink:0}},"\u00d7")
+        ),
+        h("div",{style:{fontSize:13.5,color:C.ink,lineHeight:1.55,whiteSpace:"pre-wrap"}},n.text)
+      ))
     )
   );
 
