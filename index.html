@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="ARD Field">
-<title>Advanced Remodel & Design — Daily Field Dashboard</title>
+<title>ARD Field</title>
 <link rel="icon" href="data:,">
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Archivo:wght@400;700;800;900&family=Space+Mono:wght@400;700&display=swap');
@@ -331,13 +331,9 @@ function(a,b,c){if(!Vd(b))throw Error(n(200));return Wd(null,a,b,!1,c)};Q.unmoun
 
 <script>
 const { useState, useEffect, useRef } = React;
-const APP_VERSION = "v6.1";
 const h = React.createElement;
+const APP_VERSION = "v7.0";
 
-// ════════════════════════════════════════════════════════════════════════════
-// PROJECT INTEL — pre-populated from contract data
-// TBD fields left blank — fill in as selections are confirmed in the field
-// ════════════════════════════════════════════════════════════════════════════
 const PROJECT_INTEL = {
   "superior-ct": {
     selections: [
@@ -422,6 +418,7 @@ const PROJECT_INTEL = {
 // PROJECTS
 // ════════════════════════════════════════════════════════════════════════════
 // Selection "needed by" dates derived from the schedule (procurement events / phase starts)
+
 const SELECTION_DEADLINES = {
   "superior-ct": {
     "Tile::New bath shower tile":"2026-07-06","Tile::New bath floor tile":"2026-07-06","Tile::Casita shower tile":"2026-07-06","Tile::Casita floor tile":"2026-07-06","Tile::Grout color (showers)":"2026-07-06",
@@ -515,11 +512,6 @@ const INSPECTION_CHECKLISTS = {
   }
 };
 
-function shortDate(s) { return toDate(s).toLocaleDateString("en-US",{month:"short",day:"numeric"}); }
-function fmtMoney(n) { return "$"+(parseFloat(n)||0).toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2}); }
-function coStatusColor(s) { return s==="Proposed"?"#FFD60A":s==="Approved"?"#06D6A0":s==="Invoiced"?"#0066FF":"#8B98A4"; }
-function mergeNested(local, server) { const out={}; const pids={}; Object.keys(local).forEach(p=>pids[p]=1); Object.keys(server).forEach(p=>pids[p]=1); Object.keys(pids).forEach(p=>{ out[p]=Object.assign({},local[p]||{},server[p]||{}); }); return out; }
-function parseActionItems(text) { if(!text) return []; const m=text.match(/ACTION ITEMS[\s\S]*?(?=FLAGS|$)/i); const seg=m?m[0]:text; const items=(seg.match(/^\s*\d+\.\s+.+$/gm)||[]).map(l=>l.replace(/^\s*\d+\.\s*/,"").trim()); return items.filter(Boolean).slice(0,10); }
 
 const PROJECTS = [
   {
@@ -627,108 +619,141 @@ const PROJECTS = [
       "Glass shower door field measurements pending tile/curb completion",
     ],
   },
-  // ── TEMPLATE FOR THE NEXT PROJECT — copy this block, fill in, append above ──
-  // {
-  //   id: "short-slug",
-  //   name: "Project address",
-  //   location: "City, State Zip",
-  //   owner: "Owner name",
-  //   gc: "Advanced Remodel & Design",
-  //   startDate: "YYYY-MM-DD",
-  //   endDate: "YYYY-MM-DD",
-  //   phases: [ { id, label, start, end, color, trade }, ... ],
-  //   holds: [ { date, label, color }, ... ],
-  //   procurement: [ { date, label, color }, ... ],
-  //   milestones: [ { date, label, color }, ... ],
-  //   openItems: [ "string", ... ],
-  // },
 ];
+
+// ── 440 Gold Canyon Dr. (Trombly) — normalized from the package-chat dashboard block ──
+PROJECTS.push({
+  id: "gc440",
+  name: "440 Gold Canyon Dr.",
+  location: "440 Gold Canyon Dr., Palm Desert, CA",
+  owner: "Russel Trombly",
+  gc: "Advanced Remodel & Design",
+  startDate: "2026-07-20",
+  endDate: "2026-10-03",
+  contractBase: 45801.42,
+  phases: [
+    { id:"P1", label:"Fireplace wall + kitchen/dining soffit", start:"2026-07-20", end:"2026-08-21", color:"#FF6B00", trade:"Framing/Tile" },
+    { id:"P2", label:"Interior paint",                         start:"2026-08-24", end:"2026-09-11", color:"#9B79D6", trade:"Paint" },
+    { id:"P3", label:"Exterior paint + closeout",              start:"2026-09-14", end:"2026-10-03", color:"#9B79D6", trade:"Paint" },
+  ],
+  holds: [
+    { date:"2026-07-22", label:"⬣ HOLD — Gas line abandonment",          color:"#E63946" },
+    { date:"2026-07-29", label:"⬣ HOLD — Framing + rough electrical",    color:"#E63946" },
+    { date:"2026-08-21", label:"⬣ HOLD — Final electrical",              color:"#E63946" },
+    { date:"2026-10-02", label:"⬣ HOLD — Final building",                color:"#E63946" },
+  ],
+  procurement: [
+    { date:"2026-07-06", label:"▸ ORDER electric fireplace (homeowner-provided)", color:"#7B2CBF" },
+    { date:"2026-07-13", label:"▸ ORDER fireplace tile (homeowner-provided)",     color:"#7B2CBF" },
+    { date:"2026-07-20", label:"▸ ORDER in-wall receptacle enclosure (GC)",       color:"#7B2CBF" },
+    { date:"2026-07-29", label:"▸ ORDER quartz hearth slab (homeowner-provided)", color:"#7B2CBF" },
+    { date:"2026-08-20", label:"▸ ORDER interior paint — colors required",        color:"#7B2CBF" },
+    { date:"2026-09-17", label:"▸ ORDER exterior paint — colors required",        color:"#7B2CBF" },
+  ],
+  milestones: [
+    { date:"2026-07-20", label:"◆ PROJECT START", color:"#101417" },
+    { date:"2026-08-03", label:"◆ Drywall nail inspection (optional — verify with AHJ)", color:"#8B98A4" },
+    { date:"2026-10-03", label:"◆ CONTRACT COMPLETION", color:"#1F9E3D" },
+  ],
+  openItems: [
+    "Interior paint colors + sheens (walls, ceilings, millwork, doors)",
+    "Exterior paint colors + sheens (body, doors, gates, trim)",
+    "HOA architectural approval — exterior color palette",
+    "Ceiling light qty/locations at $280 ea",
+    "Outlet/switch retrofit count at $20 ea",
+    "SoCalGas abandonment ticket # and date",
+    "Flue cap detail — roof patch approach",
+    "DaVinci 71 dedicated-circuit requirement verified",
+    "Source block lists exterior paint on-site-by (Sep 12) before order-by (Sep 17) — verify",
+  ],
+});
+
+PROJECT_INTEL["gc440"] = {
+  selections: [
+    { category:"Fireplace", item:"Electric fireplace", room:"Fireplace Wall", value:"DaVinci 71 GreenSmart electric fireplace — homeowner-provided",
+      fields:{ product:"DaVinci 71 GreenSmart electric fireplace", supplier:"Homeowner-provided", notes:"Dedicated circuit requirement to verify" } },
+    { category:"Tile", item:"Fireplace wall tile", room:"Fireplace Wall", value:"Oda Classic 24x48 Coast Deco #00008731 — 154 SF, homeowner-provided",
+      fields:{ product:"Oda Classic", model:"#00008731", color:"Coast Deco", size:"24x48", supplier:"Homeowner-provided", notes:"154 SF" } },
+    { category:"Countertop", item:"Floating hearth", room:"Fireplace Wall", value:"Quartz slab — 24 SF, homeowner-provided",
+      fields:{ product:"Quartz slab", supplier:"Homeowner-provided", notes:"24 SF; color not recorded" } },
+    { category:"Electrical", item:"In-wall recessed receptacle enclosure", room:"Fireplace Wall", value:"GC-supplied (manufacturer/model not recorded)",
+      fields:{ supplier:"GC", notes:"Manufacturer/model not recorded" } },
+    { category:"Electrical", item:"Ceiling lights", room:"Kitchen / Dining", value:"TBD — quantity/locations at $280 ea" },
+    { category:"Electrical", item:"Outlet/switch retrofit", room:"Whole Home", value:"TBD — count at $20 ea" },
+    { category:"Paint", item:"Interior product line", room:"Interior", value:"TBD — Spartawall / BEN / SuperPaint (one to be selected)" },
+    { category:"Paint", item:"Interior walls", room:"Interior", value:"Color TBD · Sheen TBD" },
+    { category:"Paint", item:"Interior ceilings", room:"Interior", value:"Color TBD · Sheen TBD" },
+    { category:"Paint", item:"Interior millwork", room:"Interior", value:"Color TBD · Sheen TBD" },
+    { category:"Paint", item:"Interior doors", room:"Interior", value:"Color TBD · Sheen TBD" },
+    { category:"Paint", item:"Exterior product line", room:"Exterior", value:"TBD — Evershield / SuperPaint / AcriBond (one to be selected)" },
+    { category:"Paint", item:"Exterior body", room:"Exterior", value:"Color TBD · Sheen TBD — HOA approval required" },
+    { category:"Paint", item:"Exterior doors", room:"Exterior", value:"Color TBD · Sheen TBD — HOA approval required" },
+    { category:"Paint", item:"Exterior gates", room:"Exterior", value:"Color TBD · Sheen TBD — HOA approval required" },
+    { category:"Paint", item:"Exterior trim", room:"Exterior", value:"Color TBD · Sheen TBD — HOA approval required" },
+  ],
+  scopeNotes: [
+    { area:"Fireplace Wall", note:"Demolish and rebuild fireplace wall. Gas line abandonment (SoCalGas ticket # + date TBD; inspection Jul 22). Install homeowner-provided DaVinci 71 GreenSmart electric fireplace — dedicated circuit to verify. Homeowner-provided Oda Classic 24x48 tile (154 SF) and quartz floating hearth (24 SF). Flue cap / roof patch approach TBD." },
+    { area:"Kitchen / Dining Soffit", note:"Remove soffit to flush ceiling. Framing + rough electrical inspection Jul 29. Ceiling lights at $280 ea — quantity/locations TBD. Outlet/switch retrofit at $20 ea — count TBD. Final electrical Aug 21." },
+    { area:"Interior Paint", note:"Aug 24 – Sep 11. Walls, ceilings, millwork, doors. Product line and all colors/sheens TBD." },
+    { area:"Exterior Paint", note:"Sep 14 – Oct 3. Body, doors, gates, trim. Product line and colors/sheens TBD. HOA architectural approval of the exterior palette assumed required — verify." },
+    { area:"Closeout", note:"Final building inspection Oct 2. Contract completion Oct 3. Contract value $45,801.42." },
+  ],
+};
+
+SELECTION_DEADLINES["gc440"] = {
+  "Paint::Interior product line":"2026-08-20","Paint::Interior walls":"2026-08-20","Paint::Interior ceilings":"2026-08-20","Paint::Interior millwork":"2026-08-20","Paint::Interior doors":"2026-08-20",
+  "Paint::Exterior product line":"2026-09-17","Paint::Exterior body":"2026-09-17","Paint::Exterior doors":"2026-09-17","Paint::Exterior gates":"2026-09-17","Paint::Exterior trim":"2026-09-17",
+  "Electrical::Ceiling lights":"2026-07-29","Electrical::Outlet/switch retrofit":"2026-07-29"
+};
+
+INSPECTION_CHECKLISTS["gc440"] = {
+  "2026-10-02": [
+    "Electric fireplace installed per manufacturer instructions",
+    "Dedicated circuit for fireplace verified",
+    "Final electrical signed off (Aug 21) — card on site",
+    "Gas line abandonment signed off",
+    "Receptacle enclosure + devices trimmed out",
+    "Smoke/CO alarms per code — verify with AHJ",
+    "Permit card + approved plans on site, work areas clean"
+  ]
+};
+
 
 // ════════════════════════════════════════════════════════════════════════════
 // HELPERS
 // ════════════════════════════════════════════════════════════════════════════
-function toDate(str) { return new Date(str + "T00:00:00"); }
+function normDate(v) {
+  if (!v) return "";
+  const t = String(v);
+  if (/^\d{4}-\d{2}-\d{2}/.test(t)) return t.slice(0,10);
+  const d = new Date(t); if (isNaN(d)) return "";
+  return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+}
+function normRecDates(obj, fields) {
+  const out = {};
+  Object.keys(obj||{}).forEach(pid => { out[pid] = {}; Object.keys(obj[pid]||{}).forEach(id => { const r = Object.assign({}, obj[pid][id]); fields.forEach(f => { if (r[f]) r[f] = normDate(r[f]); }); out[pid][id] = r; }); });
+  return out;
+}
+function toDate(s) { return new Date(normDate(s) + "T00:00:00"); }
 function localDateStr(d) { return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); }
+function addDays(s, n) { const d = toDate(s); d.setDate(d.getDate()+n); return localDateStr(d); }
 function fmt(d) { return d.toLocaleDateString("en-US",{weekday:"long",month:"long",day:"numeric",year:"numeric"}); }
-function daysBetween(a,b) { return Math.round((b-a)/(1000*60*60*24)); }
-function getActivePhases(project, today) { return project.phases.filter(p => today >= toDate(p.start) && today < toDate(p.end)); }
-function getUpcomingPhases(project, today, days=7) { const horizon = new Date(today); horizon.setDate(horizon.getDate()+days); return project.phases.filter(p => toDate(p.start) > today && toDate(p.start) <= horizon); }
-function getTodayEvents(project, today) { const ds = localDateStr(today); return [...project.holds.filter(e=>e.date===ds),...project.procurement.filter(e=>e.date===ds),...project.milestones.filter(e=>e.date===ds)]; }
-function getUpcomingEvents(project, today, days) { days=days||7; const ds=localDateStr(today); const horizon=new Date(today); horizon.setDate(horizon.getDate()+days); const hs=localDateStr(horizon); return [].concat(project.holds,project.procurement,project.milestones).filter(function(e){return e.date>ds&&e.date<=hs;}).sort(function(a,b){return a.date<b.date?-1:1;}); }
-function projectProgress(project, today) { const start=toDate(project.startDate),end=toDate(project.endDate); const total=daysBetween(start,end); const elapsed=Math.max(0,Math.min(total,daysBetween(start,today))); return Math.round(elapsed/total*100); }
-
-function buildSystemPrompt(project, today, activePhases, upcomingPhases, events, effSelections, openTasks, recentNotes) {
-  const noteText = (recentNotes&&recentNotes.length)? recentNotes.slice(0,10).map(n=>"["+n.date+"] "+n.text).join("\n") : "None";
-  const taskText = (openTasks&&openTasks.length)? openTasks.map(t=>"- "+t.text).join("\n") : "None";
-  const dlSel = effSelections? effSelections.filter(s=>s.deadline&&s.value.includes("TBD")) : [];
-  const dlText = dlSel.length? dlSel.map(s=>"- "+s.category+"/"+s.item+": needed by "+s.deadline).join("\n") : "None";
-  const pct = projectProgress(project, today);
-  const intel = PROJECT_INTEL[project.id];
-  const selList = effSelections || (intel ? intel.selections : null);
-  const selectionsText = selList ? selList.map(s=>`${s.category} — ${s.item}: ${s.value}`).join("\n") : "No selections data.";
-  const scopeText = intel ? intel.scopeNotes.map(s=>`${s.area}: ${s.note}`).join("\n\n") : "No scope notes.";
-  return `You are a construction field consultant for ${project.gc}, on the ${project.name} project at ${project.location} (owner: ${project.owner}). Today is ${fmt(today)} — ~${pct}% through the schedule.
-
-ACTIVE PHASES: ${activePhases.length ? activePhases.map(p=>p.label).join(", ") : "None"}
-UPCOMING 7 DAYS: ${upcomingPhases.length ? upcomingPhases.map(p=>p.label).join(", ") : "None"}
-TODAY'S EVENTS: ${events.length ? events.map(e=>e.label).join(", ") : "None"}
-OPEN ITEMS: ${project.openItems.join(" | ")}
-
-OPEN TASKS (carryover \u2014 fold into today's plan where relevant):
-${taskText}
-
-UNRESOLVED SELECTIONS WITH DEADLINES:
-${dlText}
-
-RECENT FIELD NOTES (last 7 days \u2014 factor into today's plan):
-${noteText}
-
-MATERIAL SELECTIONS:
-${selectionsText}
-
-SCOPE NOTES BY AREA:
-${scopeText}
-
-Generate a structured daily field briefing using EXACTLY these section headers:
-## TODAY'S TASKS
-3-6 numbered concrete actionable tasks for today's active phases.
-## WATCH ITEMS
-2-4 upcoming deadlines, risks, or dependency gates.
-## DAILY Q&A
-Exactly 4 numbered questions for the GC — specific, answerable in 1-3 sentences.
-## NOTES
-1-2 brief code/procurement/safety notes.
-Under 450 words. Direct, field-literal, no fluff.`;
+function fmtLong(s) { const d = s ? toDate(s) : null; return (d && !isNaN(d)) ? d.toLocaleDateString("en-US",{month:"long",day:"numeric",year:"numeric"}) : ""; }
+function shortDate(s) { const d = s ? toDate(s) : null; return (d && !isNaN(d)) ? d.toLocaleDateString("en-US",{month:"short",day:"numeric"}) : ""; }
+function daysBetween(a,b) { return Math.round((b-a)/86400000); }
+function fmtMoney(n) { return "$"+(parseFloat(n)||0).toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2}); }
+function uid(p) { return p+Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
+function selKey(s) { return s.category+"::"+s.item; }
+function isTBDText(v) { return /\bTBD\b|to be selected|pending owner selection/i.test(v||""); }
+function cleanLabel(l) { return (l||"").replace(/^[^A-Za-z0-9]+/,"").replace(/^(HOLD|DEADLINE)\s*[—-]\s*/,"").trim(); }
+function mergeNested(local, server) {
+  const out={}; const ids={}; Object.keys(local||{}).forEach(p=>ids[p]=1); Object.keys(server||{}).forEach(p=>ids[p]=1);
+  Object.keys(ids).forEach(p=>{ const L=(local||{})[p]||{}, S=(server||{})[p]||{}; const o=Object.assign({},L);
+    Object.keys(S).forEach(k=>{ const sv=S[k], lv=L[k]; o[k]=(sv&&typeof sv==="object"&&lv&&typeof lv==="object"&&!Array.isArray(sv)) ? Object.assign({},lv,sv) : sv; });
+    out[p]=o; });
+  return out;
 }
-
-function buildIntelPrompt(project, question, effSelections, projNotes) {
-  const notesText = (projNotes&&projNotes.length)? projNotes.slice(0,60).map(n=>"["+n.date+"] "+n.text).join("\n") : "No field notes yet.";
-  const intel = PROJECT_INTEL[project.id];
-  const selList = effSelections || (intel ? intel.selections : null);
-  const selectionsText = selList ? selList.map(s=>`${s.category} — ${s.item}: ${s.value}`).join("\n") : "No selections data.";
-  const scopeText = intel ? intel.scopeNotes.map(s=>`${s.area}: ${s.note}`).join("\n\n") : "No scope notes.";
-  return `You are a construction field assistant for ${project.gc} on the ${project.name} project at ${project.location} (owner: ${project.owner}).
-
-You have access to the following project knowledge base — use it to answer questions accurately. If the answer isn't in the data, say so directly rather than guessing.
-
-MATERIAL SELECTIONS:
-${selectionsText}
-
-SCOPE NOTES BY AREA:
-${scopeText}
-
-SCHEDULE PHASES:
-${project.phases.map(p=>`${p.label}: ${p.start} to ${p.end}`).join("\n")}
-
-OPEN ITEMS:
-${project.openItems.join("\n")}
-
-FIELD NOTES (dated, newest first \u2014 these are the GC's own jobsite notes; treat them as ground truth for what happened on site):
-${notesText}
-
-Answer the GC's question below clearly and concisely. If the question is about a quantity or material that's confirmed, state it directly. If it's TBD, say so and note what's needed to resolve it. Field-literal language, no fluff, under 150 words unless the question genuinely requires more.`;
-}
-
+function coStatusColor(s) { return s==="Proposed"?"#FFD60A":s==="Approved"?"#06D6A0":s==="Invoiced"?"#0066FF":"#8B98A4"; }
 function friendlyApiError(e) {
   const m = (e && e.message) ? e.message : String(e);
   if (/invalid x-api-key|authentication_error/i.test(m)) return "API key rejected - tap Settings and re-check the key (console.anthropic.com > API Keys).";
@@ -737,630 +762,1002 @@ function friendlyApiError(e) {
   if (/Failed to fetch|NetworkError|Load failed/i.test(m)) return "Cannot reach the API - check your signal and try again.";
   return "API error: " + m;
 }
+function parseNumberedList(text, header) {
+  if (!text) return [];
+  let seg = text;
+  if (header) { const re = new RegExp(header+"[\\s\\S]*?(?=\\n## |$)","i"); const m = text.match(re); if (m) seg = m[0]; }
+  return (seg.match(/^\s*\d+\.\s+.+$/gm)||[]).map(l=>l.replace(/^\s*\d+\.\s*/,"").replace(/\*\*/g,"").trim()).filter(Boolean).slice(0,10);
+}
 
-function parseQuestions(text) {
-  const section = (text.match(/## DAILY Q&A\n([\s\S]*?)(?=\n## |$)/)||[])[1] || "";
-  const out = section.trim().split(/\n(?=\d+\.)/).map(q=>q.replace(/^\d+\.\s*/,"").trim()).filter(Boolean).slice(0,4);
-  if (out.length) return out;
-  return (text.match(/\d+\.\s+[^\n]{10,}\?/g)||[]).map(q=>q.replace(/^\d+\.\s*/,"").trim()).slice(0,4);
+const SPEC_FIELDS = [
+  ["manufacturer","Manufacturer"],["product","Product / line"],["model","Model / SKU"],
+  ["color","Color"],["finish","Finish / sheen"],["size","Size"],
+  ["supplier","Supplier"],["warranty","Warranty / care"],["notes","Notes"]
+];
+const SPEC_FIELD_KEYS = SPEC_FIELDS.map(f=>f[0]);
+const EMPTY_SPEC = { manufacturer:"",product:"",model:"",color:"",finish:"",size:"",supplier:"",warranty:"",notes:"",status:"Selected",ownerApproved:false,approvedDate:"",custom:false,source:"contract",updatedDate:"" };
+
+function roomFor(b) {
+  if (b.room) return b.room;
+  const t = (b.item||"").toLowerCase(), c = b.category;
+  if (/^areas:/.test(t)) return "Whole Home";
+  if (/casita/.test(t)) return "Casita";
+  if (/new bath/.test(t)) return "New Bathroom";
+  if (/kitchen/.test(t)) return "Kitchen";
+  if (/\bden\b/.test(t)) return "Den → Bedroom";
+  if (/laundry/.test(t)) return "Laundry";
+  if (/pocket door/.test(t)) return "New Bathroom / Laundry";
+  if (/shower|grout/.test(t)) return "Bathrooms";
+  if (c==="Countertop" || c==="Appliances") return "Kitchen";
+  return "Whole Home";
+}
+function hasDetail(s) { return !!(s.manufacturer||s.product||s.model||s.color||s.finish); }
+function specSummary(s) {
+  const parts = [[s.manufacturer,s.product].filter(Boolean).join(" "), s.model, [s.color,s.finish].filter(Boolean).join(", "), s.size].filter(Boolean);
+  return parts.length ? parts.join(" · ") : (s.notes || "—");
+}
+function stripComputed(s) { const o = Object.assign({}, s); delete o.deadline; delete o.contractText; return o; }
+
+function buildSpecs(pid, specsState, selOv) {
+  const intel = PROJECT_INTEL[pid]; const base = intel ? intel.selections : [];
+  const rec = (specsState||{})[pid] || {}; const ov = (selOv||{})[pid] || {}; const dl = SELECTION_DEADLINES[pid] || {};
+  const out = []; const seen = {};
+  base.forEach(b => {
+    const key = selKey(b); seen[key] = 1;
+    let s = Object.assign({}, EMPTY_SPEC, { key, category:b.category, item:b.item, room:roomFor(b), notes:b.value, status:isTBDText(b.value)?"TBD":"Selected" }, b.fields||{});
+    const o = ov[key];
+    if (o !== undefined && o !== "") { s.notes = o; s.status = isTBDText(o)?"TBD":"Selected"; s.source = "edit"; }
+    if (rec[key]) s = Object.assign(s, rec[key], { key, custom:false });
+    s.contractText = b.value; s.deadline = dl[key] || "";
+    out.push(s);
+  });
+  Object.keys(rec).forEach(k => {
+    if (!seen[k] && rec[k]) out.push(Object.assign({}, EMPTY_SPEC, rec[k], { key:k, custom:true, deadline:dl[k]||"" }));
+  });
+  return out;
+}
+
+const CAT_COLORS = { Paint:"#C8B8E0", Tile:"#008B8B", Plumbing:"#0066FF", Cabinetry:"#D4C4A0", Doors:"#E8DCC0", Baseboard:"#E8DCC0", Electrical:"#FFB000", Waterproofing:"#00D4D4", Framing:"#FF6B00" };
+function catColor(c) { return CAT_COLORS[c] || "#9AA3AD"; }
+
+const PHASE_STATUS = { done:{label:"Done",color:"#06D6A0"}, active:{label:"In progress",color:"#0066FF"}, behind:{label:"Behind",color:"#E63946"}, notstarted:{label:"Not started",color:"#8B98A4"} };
+function phaseState(progress, pid, p, todayStr) {
+  const r = ((progress||{})[pid]||{})["phase::"+p.id];
+  if (r && PHASE_STATUS[r.status]) return { key:r.status, label:PHASE_STATUS[r.status].label, color:PHASE_STATUS[r.status].color, note:r.note||"", date:r.date||"", recorded:true };
+  if (p.end < todayStr) return { key:"unconfirmed", label:"Needs update", color:"#FFD60A", recorded:false };
+  if (p.start <= todayStr) return { key:"scheduled", label:"Scheduled now", color:"#8B98A4", recorded:false };
+  return { key:"upcoming", label:"Upcoming", color:"#5C6770", recorded:false };
+}
+function defaultProjStatus(p, todayStr) { return p.endDate < todayStr ? "Closeout" : "Active"; }
+
+// ════════════════════════════════════════════════════════════════════════════
+// CHECK-IN QUESTIONS — built from the schedule + specs, so every answer has a home
+// ════════════════════════════════════════════════════════════════════════════
+function buildCheckin(project, specs, progress, todayStr, pstatus) {
+  const qs = []; const P = (progress||{})[project.id] || {};
+  const in7 = addDays(todayStr, 7), minus7 = addDays(todayStr, -7), minus14 = addDays(todayStr, -14);
+  const stale = project.phases.filter(p => p.end < minus14 && !P["phase::"+p.id]);
+  const useCatchup = stale.length >= 2 && !P["meta::catchup_off"];
+  if (useCatchup) qs.push({ id:"catchup", kind:"catchup", refs:stale.map(p=>p.id), label:"Earlier phases",
+    text: stale.length+" phases ended more than 2 weeks ago and were never marked done: "+stale.map(p=>p.label.split(/[\u2014:(]/)[0].trim()).join(", ")+". Mark them all done?",
+    hint:"Choose \u201cOne at a time\u201d if any are still open", options:["All done","One at a time"] });
+  if (pstatus !== "Closeout") {
+    project.phases
+      .filter(p => p.start <= todayStr && !(P["phase::"+p.id] && P["phase::"+p.id].status === "done"))
+      .filter(p => !(useCatchup && stale.indexOf(p) >= 0))
+      .map(p => ({ p, overdue: p.end < todayStr }))
+      .sort((a,b) => a.overdue !== b.overdue ? (a.overdue?-1:1) : (a.p.end < b.p.end ? -1 : 1))
+      .slice(0,3)
+      .forEach(({p,overdue}) => qs.push({
+        id:"phase::"+p.id, kind:"phase", ref:p.id, label:p.label,
+        text: overdue ? p.label+" was scheduled to finish "+shortDate(p.end)+" — where is it?" : p.label+" ("+shortDate(p.start)+"–"+shortDate(p.end)+") — where is it?",
+        hint: (P["phase::"+p.id] && PHASE_STATUS[P["phase::"+p.id].status]) ? "Last update: "+PHASE_STATUS[P["phase::"+p.id].status].label+" ("+shortDate(P["phase::"+p.id].date)+")" : "",
+        options:["Done","In progress","Behind","Not started"]
+      }));
+    [].concat(project.holds.map(e=>Object.assign({type:"hold"},e)), project.procurement.map(e=>Object.assign({type:"proc"},e)))
+      .filter(e => e.date >= minus7 && e.date <= in7)
+      .filter(e => { const r = P["event::"+e.date+"::"+e.label]; if (!r) return true; if (["Passed","Done"].indexOf(r.status)>=0) return false; if (r.status==="Scheduled" && e.date > todayStr) return false; return true; })
+      .sort((a,b) => a.date < b.date ? -1 : 1).slice(0,2)
+      .forEach(e => {
+        const past = e.date <= todayStr;
+        if (e.type === "hold") qs.push({ id:"event::"+e.date+"::"+e.label, kind:"event", evType:"hold", ref:"event::"+e.date+"::"+e.label, label:cleanLabel(e.label), date:e.date,
+          text: past ? cleanLabel(e.label)+" inspection ("+shortDate(e.date)+") — result?" : cleanLabel(e.label)+" inspection ("+shortDate(e.date)+") — scheduled with the city?",
+          options: past ? ["Passed","Failed — re-inspect","Not yet"] : ["Scheduled","Not yet"] });
+        else qs.push({ id:"event::"+e.date+"::"+e.label, kind:"event", evType:"proc", ref:"event::"+e.date+"::"+e.label, label:cleanLabel(e.label), date:e.date,
+          text: cleanLabel(e.label)+" (due "+shortDate(e.date)+") — status?", options:["Done","On track","At risk"] });
+      });
+  }
+  specs.filter(s => s.status === "TBD")
+    .sort((a,b) => { const ad=a.deadline||"9999-99-99", bd=b.deadline||"9999-99-99"; return ad<bd?-1:ad>bd?1:0; })
+    .slice(0, pstatus==="Closeout" ? 4 : 3)
+    .forEach(s => qs.push({ id:"spec::"+s.key, kind:"spec", ref:s.key, item:s.item, category:s.category, room:s.room,
+      overdue: !!(s.deadline && s.deadline < todayStr),
+      text: (/s$/i.test(s.item.trim())?"Have":"Has")+" the "+s.item.toLowerCase()+" ("+s.category+(s.room&&s.room!=="Whole Home"?" · "+s.room:"")+") been chosen?",
+      hint: s.deadline ? (s.deadline < todayStr ? "Overdue — needed by "+shortDate(s.deadline) : "Needed by "+shortDate(s.deadline)) : "",
+      options:["Yes","Not yet","N/A"] }));
+  if (pstatus === "Closeout") {
+    specs.filter(s => s.status === "Selected" && !hasDetail(s)).slice(0,4)
+      .forEach(s => qs.push({ id:"specdetail::"+s.key, kind:"specdetail", ref:s.key, item:s.item, category:s.category, room:s.room,
+        text: "Product details for the "+s.item.toLowerCase()+" ("+s.category+")?", hint:"For the owner package: brand, product, model/SKU, color, finish",
+        options:["Yes","Not yet"] }));
+  }
+  qs.push({ id:"general", kind:"general", text:"Anything else from the site today?", hint:"Saved as a note", options:[] });
+  return qs;
 }
 
 // ════════════════════════════════════════════════════════════════════════════
-// STORAGE
+// CLAUDE API
 // ════════════════════════════════════════════════════════════════════════════
-const KEY_KEY = "ard_dash_apikey";
-const SYNC_KEY = "ard_dash_syncurl";
-const PROJECT_KEY = "ard_dash_active_project";
-const LOCAL_LOG_FALLBACK = "ard_dash_log_fallback";
-const INTEL_CHAT_PREFIX = "ard_dash_intel_chat::";
-function loadKey() { try { return localStorage.getItem(KEY_KEY)||""; } catch(e){ return ""; } }
-function saveKey(k) { try { localStorage.setItem(KEY_KEY,k); } catch(e){} }
-function loadSyncUrl() { try { return localStorage.getItem(SYNC_KEY)||""; } catch(e){ return ""; } }
-function saveSyncUrl(u) { try { localStorage.setItem(SYNC_KEY,u); } catch(e){} }
-function loadActiveProjectId() { try { return localStorage.getItem(PROJECT_KEY)||PROJECTS[0].id; } catch(e){ return PROJECTS[0].id; } }
-function saveActiveProjectId(id) { try { localStorage.setItem(PROJECT_KEY,id); } catch(e){} }
-function loadFallbackLog() { try { return JSON.parse(localStorage.getItem(LOCAL_LOG_FALLBACK)||"[]"); } catch(e){ return []; } }
-function saveFallbackLog(l) { try { localStorage.setItem(LOCAL_LOG_FALLBACK,JSON.stringify(l)); } catch(e){} }
-function loadIntelChat(pid) { try { return JSON.parse(localStorage.getItem(INTEL_CHAT_PREFIX+pid)||"[]"); } catch(e){ return []; } }
-function saveIntelChat(pid,c) { try { localStorage.setItem(INTEL_CHAT_PREFIX+pid,JSON.stringify(c.slice(-40))); } catch(e){} }
-const SEL_OVERRIDES_KEY = "ard_dash_sel_overrides";
-function loadSelOverrides() { try { return JSON.parse(localStorage.getItem(SEL_OVERRIDES_KEY)||"{}"); } catch(e){ return {}; } }
-function saveSelOverridesLS(o) { try { localStorage.setItem(SEL_OVERRIDES_KEY,JSON.stringify(o)); } catch(e){} }
-function selKey(s) { return s.category+"::"+s.item; }
-function applyOverrides(pid, selections, overrides) { const po=overrides[pid]||{}; const dl=SELECTION_DEADLINES[pid]||{}; return selections.map(s=>{ const k=selKey(s); const ov=po[k]; const base=(ov!==undefined&&ov!=="")?Object.assign({},s,{value:ov,edited:true}):Object.assign({},s,{edited:false}); if(dl[k]) base.deadline=dl[k]; return base; }); }
-function briefKey(pid,ds) { return "ard_dash_brief::"+pid+"::"+ds; }
-function loadBrief(pid,ds) { try { return JSON.parse(localStorage.getItem(briefKey(pid,ds))||"null"); } catch(e){ return null; } }
-function saveBrief(pid,ds,obj) { try { localStorage.setItem(briefKey(pid,ds),JSON.stringify(obj)); } catch(e){} }
-const TASKS_KEY = "ard_dash_tasks";
-function loadTasksLS() { try { return JSON.parse(localStorage.getItem(TASKS_KEY)||"{}"); } catch(e){ return {}; } }
-function saveTasksLS(o) { try { localStorage.setItem(TASKS_KEY,JSON.stringify(o)); } catch(e){} }
-const CHECKS_KEY = "ard_dash_checks";
-function loadChecksLS() { try { return JSON.parse(localStorage.getItem(CHECKS_KEY)||"{}"); } catch(e){ return {}; } }
-function saveChecksLS(o) { try { localStorage.setItem(CHECKS_KEY,JSON.stringify(o)); } catch(e){} }
-const COS_KEY = "ard_dash_cos";
-function loadCOsLS() { try { return JSON.parse(localStorage.getItem(COS_KEY)||"{}"); } catch(e){ return {}; } }
-const NOTES_KEY = "ard_dash_notes";
-function loadNotesLS() { try { return JSON.parse(localStorage.getItem(NOTES_KEY)||"{}"); } catch(e){ return {}; } }
-function saveNotesLS(o) { try { localStorage.setItem(NOTES_KEY,JSON.stringify(o)); } catch(e){} }
-function saveCOsLS(o) { try { localStorage.setItem(COS_KEY,JSON.stringify(o)); } catch(e){} }
+async function callClaude(apiKey, system, messages, maxTokens) {
+  const res = await fetch("https://api.anthropic.com/v1/messages", {
+    method:"POST",
+    headers:{ "Content-Type":"application/json", "x-api-key":apiKey, "anthropic-version":"2023-06-01", "anthropic-dangerous-direct-browser-access":"true" },
+    body: JSON.stringify({ model:"claude-sonnet-4-6", max_tokens:maxTokens||1000, system, messages })
+  });
+  const data = await res.json();
+  if (data.error) throw new Error(data.error.message);
+  return (data.content && data.content[0] && data.content[0].text) || "";
+}
+async function parseSpecAnswers(apiKey, items) {
+  const sys = "You convert a general contractor's field answers into structured product specifications for an owner closeout package. Use ONLY information stated in each answer — never guess or invent a brand, model, color, finish, or supplier. Leave a field as an empty string when the answer does not state it. Return JSON only, no prose, no code fences.";
+  const user = "Return one JSON object keyed by id. Each value has exactly these string fields: manufacturer, product, model, color, finish, size, supplier, warranty, notes. Put useful details that fit no other field (quantities, locations, conditions) in notes.\n\n" +
+    items.map(i => "id: "+i.id+"\nspec: "+i.category+" — "+i.item+(i.room?" ("+i.room+")":"")+"\nanswer: "+i.answer).join("\n\n");
+  const txt = await callClaude(apiKey, sys, [{ role:"user", content:user }], 1500);
+  const a = txt.indexOf("{"), b = txt.lastIndexOf("}");
+  if (a < 0 || b < a) return {};
+  try { return JSON.parse(txt.slice(a, b+1)); } catch(e) { return {}; }
+}
 
+function buildContext(project, specs, progress, tasks, notes, cos, clars, todayStr) {
+  const scope = (PROJECT_INTEL[project.id] && PROJECT_INTEL[project.id].scopeNotes) || [];
+  const specText = specs.map(s => "- ["+s.room+"] "+s.category+" — "+s.item+": "+(s.status==="TBD"?"TBD ("+(s.notes||"")+")":s.status==="N/A"?"N/A":specSummary(s)+(s.notes&&hasDetail(s)&&s.notes!==s.contractText?" | notes: "+s.notes:""))+(s.ownerApproved?" [owner approved "+s.approvedDate+"]":"")+(s.deadline&&s.status==="TBD"?" [needed by "+s.deadline+"]":"")).join("\n");
+  const phaseText = project.phases.map(p => { const st = phaseState(progress, project.id, p, todayStr); return "- "+p.label+": planned "+p.start+" to "+p.end+" — "+st.label+(st.recorded&&st.date?" (as of "+st.date+")":"")+(st.note?" — "+st.note:""); }).join("\n");
+  const P = (progress||{})[project.id] || {};
+  const evText = [].concat(project.holds, project.procurement).map(e => { const r = P["event::"+e.date+"::"+e.label]; return "- "+e.date+" "+cleanLabel(e.label)+(r?" — "+r.status+" ("+r.date+")":""); }).join("\n");
+  const taskText = tasks.filter(t=>!t.done).map(t=>"- "+t.text+" (added "+t.createdDate+")").join("\n") || "None";
+  const noteText = notes.slice(0,60).map(n=>"["+n.date+"] "+n.text).join("\n") || "None";
+  const coText = cos.map(c=>"- "+c.date+" "+c.title+" "+fmtMoney(c.amount)+" — "+c.status).join("\n") || "None";
+  const clarText = clars.map(c=>"- ["+c.date+"] Q: "+c.question+" | A: "+(c.answer||"(open)")+(c.decidedBy?" — decided by "+c.decidedBy:"")).join("\n") || "None";
+  return "PROJECT: "+project.name+", "+project.location+" — owner "+project.owner+". Contract "+project.startDate+" to "+project.endDate+(project.contractBase?", base "+fmtMoney(project.contractBase):"")+".\n\n"+
+    "SCHEDULE + ACTUAL PROGRESS:\n"+phaseText+"\n\nINSPECTIONS + PROCUREMENT:\n"+evText+"\n\n"+
+    "SPECIFICATIONS:\n"+specText+"\n\nSCOPE NOTES:\n"+scope.map(s=>s.area+": "+s.note).join("\n")+"\n\n"+
+    "OPEN ITEMS FROM CONTRACT REVIEW:\n"+(project.openItems||[]).join("\n")+"\n\n"+
+    "OPEN TASKS:\n"+taskText+"\n\nCHANGE ORDERS:\n"+coText+"\n\nCLARIFICATIONS / DECISIONS:\n"+clarText+"\n\n"+
+    "FIELD NOTES (GC's own jobsite notes, newest first — ground truth for what happened on site):\n"+noteText;
+}
 
-const C = { bg:"#0B0E11",panel:"#12171C",panel2:"#171D24",hair:"#2A333C",ink:"#EAF0F4",mut:"#8B98A4",crit:"#E63946",qc:"#06D6A0",proc:"#7B2CBF",warn:"#FFD60A",accent:"#1F9E3D" };
+// ════════════════════════════════════════════════════════════════════════════
+// STORAGE — existing keys kept exactly; new keys added
+// ════════════════════════════════════════════════════════════════════════════
+function lsGet(k, d) { try { const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch(e) { return d; } }
+function lsSet(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch(e) {} }
+function lsGetStr(k) { try { return localStorage.getItem(k) || ""; } catch(e) { return ""; } }
+function lsSetStr(k, v) { try { localStorage.setItem(k, v); } catch(e) {} }
+const K = {
+  apikey:"ard_dash_apikey", sync:"ard_dash_syncurl", active:"ard_dash_active_project",
+  selov:"ard_dash_sel_overrides", tasks:"ard_dash_tasks", checks:"ard_dash_checks", cos:"ard_dash_cos", notes:"ard_dash_notes",
+  specs:"ard_dash_specs", progress:"ard_dash_progress", clar:"ard_dash_clar", pstatus:"ard_dash_projstatus", showArch:"ard_dash_show_archived"
+};
+function briefKey(pid, ds) { return "ard_dash_brief::"+pid+"::"+ds; }
+function chatKey(pid) { return "ard_dash_intel_chat::"+pid; }
+
+const C = { bg:"#0B0E11",panel:"#12171C",panel2:"#171D24",hair:"#2A333C",ink:"#EAF0F4",mut:"#8B98A4",crit:"#E63946",qc:"#06D6A0",proc:"#7B2CBF",warn:"#FFD60A",accent:"#1F9E3D",blue:"#0066FF" };
+const MONO = "'Space Mono',monospace";
+
+// ════════════════════════════════════════════════════════════════════════════
+// PRINT STYLES — owner spec package (Document Design System: white, black, table-based)
+// ════════════════════════════════════════════════════════════════════════════
+const PKG_CSS = `
+.pkg-overlay{position:fixed;top:0;right:0;bottom:0;left:0;background:#DDE1E5;overflow:auto;z-index:1000;-webkit-overflow-scrolling:touch;}
+.pkg-toolbar{position:sticky;top:0;z-index:2;background:#12171C;color:#EAF0F4;padding:10px 14px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;border-bottom:1px solid #2A333C;}
+.pkg-toolbar button{border-radius:7px;font-weight:800;font-size:13px;padding:9px 14px;cursor:pointer;}
+.pkg-gaps{background:#FFF7D6;border:1px solid #E0B400;color:#5A4500;margin:12px auto 0;max-width:8.5in;padding:10px 14px;border-radius:6px;font-size:13px;line-height:1.5;font-family:'Archivo',sans-serif;}
+.pkg{color:#111;font-family:'Archivo',Arial,sans-serif;font-size:10.5pt;line-height:1.4;}
+.pkg-page{background:#fff;max-width:8.5in;margin:14px auto;padding:0.5in 0.55in;box-shadow:0 2px 10px rgba(0,0,0,.15);overflow-x:auto;}
+.pkg table{border-collapse:collapse;width:100%;}
+.pkg .sheet>thead td,.pkg .sheet>tfoot td,.pkg .sheet>tbody>tr>td{padding:0;}
+.pkg .sh{display:flex;justify-content:space-between;gap:12px;border-bottom:2.5px solid #111;padding-bottom:8px;margin-bottom:14px;font-size:8.5pt;}
+.pkg .sh b{font-size:10pt;letter-spacing:.04em;}
+.pkg .sf{border-top:1px solid #111;margin-top:14px;padding-top:6px;font-size:7.5pt;color:#333;display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;}
+.pkg h1{font-size:26pt;font-weight:900;letter-spacing:-.01em;line-height:1.1;margin:0 0 6px;}
+.pkg h2{font-size:14pt;font-weight:900;margin:0 0 10px;letter-spacing:.01em;}
+.pkg h3{font-size:10.5pt;font-weight:900;margin:16px 0 6px;padding:5px 8px;background:#F1F3F5;border-left:6px solid #111;text-transform:uppercase;letter-spacing:.05em;}
+.pkg .grid th{font-size:8pt;text-transform:uppercase;letter-spacing:.06em;text-align:left;border-bottom:1.5px solid #111;padding:5px 6px;background:#fff;}
+.pkg .grid td{border-bottom:1px solid #D0D4D8;padding:6px 6px;vertical-align:top;font-size:9.5pt;}
+.pkg .grid tr{page-break-inside:avoid;break-inside:avoid;}
+.pkg .kv td{padding:5px 8px;border:1px solid #C8CDD2;font-size:10pt;}
+.pkg .kv td:first-child{width:34%;font-weight:700;background:#F6F7F8;}
+.pkg .muted{color:#555;font-size:8.5pt;}
+.pkg .tbd{color:#9A6B00;font-weight:800;}
+.pkg .ok{color:#0A7A3F;font-weight:800;}
+.pkg .band{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:6px;vertical-align:middle;border:1px solid rgba(0,0,0,.25);}
+.pkg .pb{page-break-before:always;break-before:page;}
+@media print {
+  @page { size: letter; margin: 0.45in 0.5in; }
+  html, body { background:#fff !important; }
+  .shell, .pkg-toolbar, .pkg-gaps { display:none !important; }
+  .pkg-overlay { position:static; background:#fff; overflow:visible; }
+  .pkg-page { box-shadow:none; margin:0; padding:0; max-width:none; overflow:visible; }
+  .pkg-page + .pkg-page { page-break-before:always; break-before:page; }
+  .pkg .sheet>thead { display:table-header-group; }
+  .pkg .sheet>tfoot { display:table-footer-group; }
+  .pkg * { -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+}
+`;
 
 // ════════════════════════════════════════════════════════════════════════════
 // MAIN APP
 // ════════════════════════════════════════════════════════════════════════════
 function Dashboard() {
   const today = new Date(); today.setHours(0,0,0,0);
-  const [activeProjectId, setActiveProjectId] = useState(loadActiveProjectId);
-  const project = PROJECTS.find(p=>p.id===activeProjectId)||PROJECTS[0];
-  const activePhases = getActivePhases(project,today);
-  const upcomingPhases = getUpcomingPhases(project,today);
-  const todayEvents = getTodayEvents(project,today);
-  const upcomingEvents = getUpcomingEvents(project,today);
-  const pct = projectProgress(project,today);
-  const daysLeft = daysBetween(today,toDate(project.endDate));
-
-  const [briefing,setBriefing] = useState("");
-  const [loading,setLoading] = useState(false);
-  const [error,setError] = useState("");
-  const [answers,setAnswers] = useState({1:"",2:"",3:"",4:""});
-  const [submitted,setSubmitted] = useState(false);
-  const [log,setLog] = useState([]);
-  const [logLoading,setLogLoading] = useState(false);
-  const [tab,setTab] = useState("today");
-  const [copying,setCopying] = useState(false);
-  const [logFilter,setLogFilter] = useState("current");
-
-  // intel tab state
-  const [intelQuestion,setIntelQuestion] = useState("");
-  const [intelChat,setIntelChat] = useState(()=>loadIntelChat(loadActiveProjectId()));
-  const [intelLoading,setIntelLoading] = useState(false);
-  const [intelTab,setIntelTab] = useState("ask"); // "ask" | "selections" | "scope"
-  const chatEndRef = useRef(null);
-
-  const [apiKey,setApiKey] = useState(loadKey);
-  const [keyDraft,setKeyDraft] = useState("");
-  const [keyMsg,setKeyMsg] = useState("");
-  const [syncUrl,setSyncUrl] = useState(loadSyncUrl);
-  const [syncUrlDraft,setSyncUrlDraft] = useState("");
-  const [syncMsg,setSyncMsg] = useState("");
-  const [showSyncSetup,setShowSyncSetup] = useState(!loadSyncUrl());
-  const [settingsOpen,setSettingsOpen] = useState(!(loadKey()&&loadSyncUrl()));
-  const [selOverrides,setSelOverrides] = useState(loadSelOverrides);
-  const [editingSel,setEditingSel] = useState(null);
-  const [selDraft,setSelDraft] = useState("");
-  const [selSyncNote,setSelSyncNote] = useState("");
-  const [tasks,setTasks] = useState(loadTasksLS);
-  const [taskDraft,setTaskDraft] = useState("");
-  const [taskNote,setTaskNote] = useState("");
-  const [checks,setChecks] = useState(loadChecksLS);
-  const [expandedHold,setExpandedHold] = useState(null);
-  const [cos,setCos] = useState(loadCOsLS);
-  const [coTitle,setCoTitle] = useState("");
-  const [coAmount,setCoAmount] = useState("");
-  const [coStatus,setCoStatus] = useState("Proposed");
-  const [coNote,setCoNote] = useState("");
-  const [todayAnalysis,setTodayAnalysis] = useState("");
-  const [promoteMsg,setPromoteMsg] = useState("");
-  const [notes,setNotes] = useState(loadNotesLS);
-  const [noteDraft,setNoteDraft] = useState("");
-  const [noteMsg,setNoteMsg] = useState("");
-  const intelBase = PROJECT_INTEL[project.id];
-  const effSelections = intelBase?applyOverrides(project.id,intelBase.selections,selOverrides):null;
-  const tbdCount = effSelections?effSelections.filter(s=>s.value.includes("TBD")).length:0;
   const todayStr = localDateStr(today);
-  const in7Str = (function(){ const d2=new Date(today); d2.setDate(d2.getDate()+7); return localDateStr(d2); })();
-  const dlAll = effSelections?effSelections.filter(s=>s.deadline&&s.value.includes("TBD")):[];
-  const dlOverdue = dlAll.filter(s=>s.deadline<todayStr);
-  const dlSoon = dlAll.filter(s=>s.deadline>=todayStr&&s.deadline<=in7Str);
-  const projTasks = Object.keys(tasks[project.id]||{}).map(k=>tasks[project.id][k]);
-  const openTasks = projTasks.filter(t=>!t.done).sort((a,b)=>(a.createdDate<b.createdDate?-1:1));
-  const doneTasks = projTasks.filter(t=>t.done).sort((a,b)=>(a.doneDate<b.doneDate?1:-1));
-  const projCOs = Object.keys(cos[project.id]||{}).map(k=>cos[project.id][k]).sort((a,b)=>(a.date<b.date?1:-1));
-  const projNotes = Object.keys(notes[project.id]||{}).map(k=>notes[project.id][k]).sort((a,b)=>(a.createdAt<b.createdAt?1:-1));
-  const prepHolds = project.holds.filter(e=>e.date>=todayStr&&e.date<=in7Str&&(INSPECTION_CHECKLISTS[project.id]||{})[e.date]);
 
-  function switchProject(id) { setActiveProjectId(id); saveActiveProjectId(id); setBriefing(""); setSubmitted(false); setAnswers({1:"",2:"",3:"",4:""}); setError(""); setIntelChat(loadIntelChat(id)); setEditingSel(null); setSelDraft(""); setTodayAnalysis(""); setPromoteMsg(""); setExpandedHold(null); }
-  useEffect(()=>{ refreshLog(); refreshSelections(); refreshTasks(); refreshChecks(); refreshCOs(); refreshNotes(); },[syncUrl]);
-  useEffect(()=>{ if(chatEndRef.current) chatEndRef.current.scrollIntoView({behavior:"smooth"}); },[intelChat]);
-  useEffect(()=>{ saveIntelChat(activeProjectId,intelChat); },[intelChat,activeProjectId]);
-  useEffect(()=>{ const saved=loadBrief(activeProjectId,localDateStr(today)); if(saved&&saved.briefing){ setBriefing(saved.briefing); setAnswers(saved.answers||{1:"",2:"",3:"",4:""}); setSubmitted(!!saved.submitted); setTodayAnalysis(saved.analysis||""); } },[activeProjectId]);
-  useEffect(()=>{ if(briefing) saveBrief(activeProjectId,localDateStr(today),{briefing:briefing,answers:answers,submitted:submitted,analysis:todayAnalysis}); },[briefing,answers,submitted,todayAnalysis,activeProjectId]);
+  // ── settings ──
+  const [apiKey,setApiKey] = useState(()=>lsGetStr(K.apikey));
+  const [keyDraft,setKeyDraft] = useState("");
+  const [syncUrl,setSyncUrl] = useState(()=>lsGetStr(K.sync));
+  const [syncDraft,setSyncDraft] = useState("");
+  const [settingsOpen,setSettingsOpen] = useState(()=>!(lsGetStr(K.apikey)&&lsGetStr(K.sync)));
+  const [flash,setFlash] = useState("");
+  const [showArch,setShowArch] = useState(()=>lsGet(K.showArch,false));
 
-  async function refreshLog() {
-    if(!syncUrl){ setLog(loadFallbackLog()); return; }
-    setLogLoading(true);
-    try{ const res=await fetch(syncUrl+"?action=fetchLog"); const data=await res.json(); if(data.ok) setLog(data.entries||[]); else setLog(loadFallbackLog()); } catch(e){ setLog(loadFallbackLog()); }
-    setLogLoading(false);
-  }
-  async function refreshSelections() {
-    if(!syncUrl) return;
-    try{
-      const res=await fetch(syncUrl+"?action=fetchSelections");
-      const data=await res.json();
-      if(data&&data.ok&&data.overrides){
-        const local=loadSelOverrides(); const merged={};
-        Object.keys(local).concat(Object.keys(data.overrides)).forEach(function(pid){ merged[pid]=Object.assign({},local[pid]||{},data.overrides[pid]||{}); });
-        saveSelOverridesLS(merged); setSelOverrides(merged);
-      }
-    }catch(e){}
-  }
-  async function saveSelection(key, value) {
-    const v=(value||"").trim();
-    const next=Object.assign({},selOverrides); next[project.id]=Object.assign({},next[project.id]||{});
-    if(v==="") delete next[project.id][key]; else next[project.id][key]=v;
-    setSelOverrides(next); saveSelOverridesLS(next);
-    setEditingSel(null); setSelDraft("");
-    if(!syncUrl){ setSelSyncNote("\u2713 Saved on this device"); setTimeout(()=>setSelSyncNote(""),2500); return; }
-    try{
-      const res=await fetch(syncUrl,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({action:"setSelection",projectId:project.id,key:key,value:v})});
-      const data=await res.json();
-      if(data&&data.ok){ setSelSyncNote("\u2713 Saved + synced"); setTimeout(()=>setSelSyncNote(""),2500); }
-      else { setSelSyncNote("Saved on this device \u2014 update the Apps Script to sync selections across devices"); setTimeout(()=>setSelSyncNote(""),6000); }
-    }catch(e){ setSelSyncNote("Saved on this device \u2014 couldn\u2019t reach the Sheet"); setTimeout(()=>setSelSyncNote(""),5000); }
-  }
-  async function refreshTasks() {
-    if(!syncUrl) return;
-    try{ const res=await fetch(syncUrl+"?action=fetchTasks"); const data=await res.json();
-      if(data&&data.ok&&data.tasks){ const merged=mergeNested(loadTasksLS(),data.tasks); saveTasksLS(merged); setTasks(merged); }
-    }catch(e){}
-  }
-  async function refreshChecks() {
-    if(!syncUrl) return;
-    try{ const res=await fetch(syncUrl+"?action=fetchChecks"); const data=await res.json();
-      if(data&&data.ok&&data.checks){ const merged=mergeNested(loadChecksLS(),data.checks); saveChecksLS(merged); setChecks(merged); }
-    }catch(e){}
-  }
-  async function refreshCOs() {
-    if(!syncUrl) return;
-    try{ const res=await fetch(syncUrl+"?action=fetchCOs"); const data=await res.json();
-      if(data&&data.ok&&data.cos){ const merged=mergeNested(loadCOsLS(),data.cos); saveCOsLS(merged); setCos(merged); }
-    }catch(e){}
-  }
-  function postAction(body, onFail) {
-    if(!syncUrl){ return; }
+  // ── data ──
+  const [pstatus,setPstatus] = useState(()=>lsGet(K.pstatus,{}));
+  const [activeId,setActiveId] = useState(()=>{ const s=lsGetStr(K.active); return PROJECTS.find(p=>p.id===s)?s:PROJECTS[0].id; });
+  const [specsState,setSpecsState] = useState(()=>lsGet(K.specs,{}));
+  const [selOv,setSelOv] = useState(()=>lsGet(K.selov,{}));
+  const [progress,setProgress] = useState(()=>lsGet(K.progress,{}));
+  const [tasks,setTasks] = useState(()=>lsGet(K.tasks,{}));
+  const [checks,setChecks] = useState(()=>lsGet(K.checks,{}));
+  const [cos,setCos] = useState(()=>lsGet(K.cos,{}));
+  const [clars,setClars] = useState(()=>lsGet(K.clar,{}));
+  const [notes,setNotes] = useState(()=>lsGet(K.notes,{}));
+
+  // ── ui ──
+  const [tab,setTab] = useState("today");
+  const [specView,setSpecView] = useState("specs");
+  const [specFilter,setSpecFilter] = useState("all");
+  const [editKey,setEditKey] = useState(null);
+  const [draft,setDraft] = useState(null);
+  const [adding,setAdding] = useState(false);
+  const [chgView,setChgView] = useState("cos");
+  const [coTitle,setCoTitle] = useState(""); const [coAmount,setCoAmount] = useState(""); const [coStatus,setCoStatus] = useState("Proposed");
+  const [clQ,setClQ] = useState(""); const [clA,setClA] = useState(""); const [clBy,setClBy] = useState("");
+  const [resolving,setResolving] = useState(null); const [resA,setResA] = useState(""); const [resBy,setResBy] = useState("");
+  const [noteDraft,setNoteDraft] = useState("");
+  const [taskDraft,setTaskDraft] = useState("");
+  const [showDone,setShowDone] = useState(false);
+  const [showSched,setShowSched] = useState(false);
+  const [expandedHold,setExpandedHold] = useState(null);
+  const [chat,setChat] = useState(()=>lsGet(chatKey(lsGetStr(K.active)||PROJECTS[0].id),[]));
+  const [askQ,setAskQ] = useState(""); const [askBusy,setAskBusy] = useState(false);
+  const chatEnd = useRef(null);
+  const [showPkg,setShowPkg] = useState(false);
+  const [pkgRev,setPkgRev] = useState("0");
+
+  // ── today's check-in (persisted per project per day) ──
+  const [brief,setBrief] = useState(()=>lsGet(briefKey(lsGetStr(K.active)||PROJECTS[0].id,todayStr),null));
+  const [ciAns,setCiAns] = useState({});
+  const [ciBusy,setCiBusy] = useState(false);
+  const [ciErr,setCiErr] = useState("");
+  const [brBusy,setBrBusy] = useState(false);
+  const ciLock = useRef(false);
+  const [,setTick] = useState(0);
+  const lastDay = useRef(todayStr);
+  useEffect(()=>{
+    const wake = () => { if (document.visibilityState === "visible") { setTick(t=>t+1); refreshAll(); } };
+    document.addEventListener("visibilitychange", wake);
+    const iv = setInterval(()=>setTick(t=>t+1), 60000);
+    return () => { document.removeEventListener("visibilitychange", wake); clearInterval(iv); };
+  },[syncUrl]);
+  useEffect(()=>{ if (lastDay.current !== todayStr) { lastDay.current = todayStr; ciLock.current = false; setBrief(lsGet(briefKey(pid,todayStr),null)); setCiAns({}); setCiErr(""); } },[todayStr]);
+
+  const project = PROJECTS.find(p=>p.id===activeId) || PROJECTS[0];
+  const pid = project.id;
+  const statusOf = p => pstatus[p.id] || defaultProjStatus(p, todayStr);
+  const pStatus = statusOf(project);
+  const specs = buildSpecs(pid, specsState, selOv);
+  const projTasks = Object.values(tasks[pid]||{});
+  const openTasks = projTasks.filter(t=>!t.done).sort((a,b)=>a.createdDate<b.createdDate?-1:1);
+  const doneTasks = projTasks.filter(t=>t.done).sort((a,b)=>(a.doneDate||"")<(b.doneDate||"")?1:-1);
+  const projCOs = Object.values(cos[pid]||{}).sort((a,b)=>a.date<b.date?1:-1);
+  const projClars = Object.values(clars[pid]||{}).sort((a,b)=>(a.createdAt||0)<(b.createdAt||0)?1:-1);
+  const projNotes = Object.values(notes[pid]||{}).sort((a,b)=>(a.createdAt||0)<(b.createdAt||0)?1:-1);
+  const tbdSpecs = specs.filter(s=>s.status==="TBD");
+  const dlOverdue = tbdSpecs.filter(s=>s.deadline&&s.deadline<todayStr);
+  const dlSoon = tbdSpecs.filter(s=>s.deadline&&s.deadline>=todayStr&&s.deadline<=addDays(todayStr,7));
+  const phaseStates = project.phases.map(p=>({p, st:phaseState(progress,pid,p,todayStr)}));
+  const behind = phaseStates.filter(x=>x.st.key==="behind"||x.st.key==="unconfirmed");
+  const doneCount = phaseStates.filter(x=>x.st.key==="done").length;
+  const openClars = projClars.filter(c=>c.status!=="Resolved");
+  const proposedCOs = projCOs.filter(c=>c.status==="Proposed");
+  const totalDays = daysBetween(toDate(project.startDate),toDate(project.endDate));
+  const timePct = Math.round(Math.max(0,Math.min(totalDays,daysBetween(toDate(project.startDate),today)))/totalDays*100);
+  const daysLeft = daysBetween(today,toDate(project.endDate));
+  const prepHolds = project.holds.filter(e=>e.date>=todayStr&&e.date<=addDays(todayStr,7)&&(INSPECTION_CHECKLISTS[pid]||{})[e.date]);
+  const upcoming = [].concat(project.holds,project.procurement,project.milestones).filter(e=>e.date>todayStr&&e.date<=addDays(todayStr,7)).sort((a,b)=>a.date<b.date?-1:1);
+  const todayEvents = [].concat(project.holds,project.procurement,project.milestones).filter(e=>e.date===todayStr);
+
+  const ciQuestions = (brief && brief.checkin && brief.checkin.questions) || buildCheckin(project, specs, progress, todayStr, pStatus);
+  const ciSubmitted = !!(brief && brief.checkin && brief.checkin.submitted);
+
+  // ── persistence effects ──
+  useEffect(()=>{ lsSet(K.specs,specsState); },[specsState]);
+  useEffect(()=>{ lsSet(K.progress,progress); },[progress]);
+  useEffect(()=>{ lsSet(K.tasks,tasks); },[tasks]);
+  useEffect(()=>{ lsSet(K.checks,checks); },[checks]);
+  useEffect(()=>{ lsSet(K.cos,cos); },[cos]);
+  useEffect(()=>{ lsSet(K.clar,clars); },[clars]);
+  useEffect(()=>{ lsSet(K.notes,notes); },[notes]);
+  useEffect(()=>{ lsSet(K.pstatus,pstatus); },[pstatus]);
+  useEffect(()=>{ lsSet(chatKey(pid),chat.slice(-40)); },[chat,pid]);
+  useEffect(()=>{ if(brief && lastDay.current===todayStr) lsSet(briefKey(pid,todayStr),brief); },[brief,pid]);
+  useEffect(()=>{ if(chatEnd.current) chatEnd.current.scrollIntoView({behavior:"smooth"}); },[chat]);
+  useEffect(()=>{ refreshAll(); },[syncUrl]);
+
+  function note(msg, ms) { setFlash(msg); setTimeout(()=>setFlash(""), ms||2600); }
+
+  // ── sync ──
+  function postAction(body) {
+    if (!syncUrl) return;
     fetch(syncUrl,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify(body)})
-      .then(r=>r.json()).then(d=>{ if(!(d&&d.ok)&&onFail) onFail("Saved on this device \u2014 update the Apps Script to sync across devices"); })
-      .catch(()=>{ if(onFail) onFail("Saved on this device \u2014 couldn\u2019t reach the Sheet"); });
+      .then(r=>r.json()).then(d=>{ if(!(d&&d.ok)) note("Saved on this device — update the Apps Script to sync across devices",6000); })
+      .catch(()=>note("Saved on this device — couldn’t reach the Sheet",5000));
   }
-  function upsertTaskLocal(t) {
-    const next=Object.assign({},tasks); next[project.id]=Object.assign({},next[project.id]||{}); next[project.id][t.id]=t;
-    setTasks(next); saveTasksLS(next);
+  async function pull(action, field) {
+    try { const r = await fetch(syncUrl+"?action="+action); const d = await r.json(); return (d&&d.ok&&d[field]) ? d[field] : null; } catch(e) { return null; }
   }
-  function addTask(text, source) {
-    const v=(text||"").trim(); if(!v) return;
-    const t={ id:"t"+Date.now().toString(36)+Math.random().toString(36).slice(2,6), text:v, done:false, source:source||"manual", createdDate:localDateStr(today), doneDate:"" };
-    upsertTaskLocal(t); setTaskDraft("");
-    postAction({action:"setTask",projectId:project.id,task:t}, m=>{ setTaskNote(m); setTimeout(()=>setTaskNote(""),5000); });
-  }
-  function toggleTask(t) {
-    const t2=Object.assign({},t,{done:!t.done,doneDate:!t.done?localDateStr(today):""});
-    upsertTaskLocal(t2);
-    postAction({action:"setTask",projectId:project.id,task:t2}, m=>{ setTaskNote(m); setTimeout(()=>setTaskNote(""),5000); });
-  }
-  function removeTask(t) {
-    if(!window.confirm("Delete this task?")) return;
-    const next=Object.assign({},tasks); next[project.id]=Object.assign({},next[project.id]||{}); delete next[project.id][t.id];
-    setTasks(next); saveTasksLS(next);
-    postAction({action:"deleteTask",projectId:project.id,taskId:t.id}, null);
-  }
-  function promoteActions() {
-    const items=parseActionItems(todayAnalysis||(log[0]&&log[0].analysis)||"");
-    const existing=openTasks.map(t=>t.text);
-    const next=Object.assign({},tasks); next[project.id]=Object.assign({},next[project.id]||{});
-    let added=0;
-    items.forEach((it,ix)=>{ if(existing.indexOf(it)===-1){ const t={ id:"t"+Date.now().toString(36)+Math.random().toString(36).slice(2,6)+ix, text:it, done:false, source:"briefing", createdDate:localDateStr(today), doneDate:"" }; next[project.id][t.id]=t; postAction({action:"setTask",projectId:project.id,task:t},null); added++; } });
-    if(added>0){ setTasks(next); saveTasksLS(next); }
-    setPromoteMsg(added>0?("\u2713 Added "+added+" task"+(added>1?"s":"")+" \u2014 see Tasks tab"):"Already in Tasks");
-    setTimeout(()=>setPromoteMsg(""),4000);
-  }
-  function toggleCheck(itemKey, val) {
-    const next=Object.assign({},checks); next[project.id]=Object.assign({},next[project.id]||{});
-    if(val) next[project.id][itemKey]=true; else delete next[project.id][itemKey];
-    setChecks(next); saveChecksLS(next);
-    postAction({action:"setCheck",projectId:project.id,key:itemKey,checked:!!val}, null);
-  }
-  function addCO() {
-    const t=coTitle.trim(); const a=parseFloat(coAmount);
-    if(!t||!(a>0||a===0)) return;
-    const co={ id:"c"+Date.now().toString(36)+Math.random().toString(36).slice(2,6), title:t, amount:a, status:coStatus, date:localDateStr(today), notes:"" };
-    const next=Object.assign({},cos); next[project.id]=Object.assign({},next[project.id]||{}); next[project.id][co.id]=co;
-    setCos(next); saveCOsLS(next); setCoTitle(""); setCoAmount(""); setCoStatus("Proposed");
-    postAction({action:"setCO",projectId:project.id,co:co}, m=>{ setCoNote(m); setTimeout(()=>setCoNote(""),5000); });
-  }
-  function updateCOStatus(co, st) {
-    const co2=Object.assign({},co,{status:st});
-    const next=Object.assign({},cos); next[project.id]=Object.assign({},next[project.id]||{}); next[project.id][co2.id]=co2;
-    setCos(next); saveCOsLS(next);
-    postAction({action:"setCO",projectId:project.id,co:co2}, m=>{ setCoNote(m); setTimeout(()=>setCoNote(""),5000); });
-  }
-  function removeCO(co) {
-    if(!window.confirm("Delete this change order?")) return;
-    const next=Object.assign({},cos); next[project.id]=Object.assign({},next[project.id]||{}); delete next[project.id][co.id];
-    setCos(next); saveCOsLS(next);
-    postAction({action:"deleteCO",projectId:project.id,coId:co.id}, null);
-  }
-  async function refreshNotes() {
-    if(!syncUrl) return;
-    try{ const res=await fetch(syncUrl+"?action=fetchNotes"); const data=await res.json();
-      if(data&&data.ok&&data.notes){ const merged=mergeNested(loadNotesLS(),data.notes); saveNotesLS(merged); setNotes(merged); }
-    }catch(e){}
-  }
-  function addNote() {
-    const v=noteDraft.trim(); if(!v) return;
-    const n={ id:"n"+Date.now().toString(36)+Math.random().toString(36).slice(2,6), text:v, date:localDateStr(today), createdAt:Date.now() };
-    const next=Object.assign({},notes); next[project.id]=Object.assign({},next[project.id]||{}); next[project.id][n.id]=n;
-    setNotes(next); saveNotesLS(next); setNoteDraft("");
-    postAction({action:"setNote",projectId:project.id,note:n}, m=>{ setNoteMsg(m); setTimeout(()=>setNoteMsg(""),5000); });
-  }
-  function removeNote(n) {
-    if(!window.confirm("Delete this note?")) return;
-    const next=Object.assign({},notes); next[project.id]=Object.assign({},next[project.id]||{}); delete next[project.id][n.id];
-    setNotes(next); saveNotesLS(next);
-    postAction({action:"deleteNote",projectId:project.id,noteId:n.id}, null);
-  }
-  async function pushEntry(entry) {
-    if(!syncUrl){ const nl=[entry,...loadFallbackLog().filter(x=>!(x.date===entry.date&&x.projectId===entry.projectId))]; saveFallbackLog(nl); setLog(nl); return; }
-    try{ const res=await fetch(syncUrl,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({action:"addEntry",entry})}); const data=await res.json(); if(data.ok) setLog(data.entries||[]); }
-    catch(e){ const nl=[entry,...loadFallbackLog().filter(x=>!(x.date===entry.date&&x.projectId===entry.projectId))]; saveFallbackLog(nl); setLog(nl); setError("Saved locally — couldn't reach Sheet sync."); }
-  }
-  async function clearAllLog() {
-    if(!window.confirm("Clear ALL log entries for ALL projects?")) return;
-    if(syncUrl){ try{ const res=await fetch(syncUrl,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({action:"clearLog"})}); const d=await res.json(); setLog(d.entries||[]); }catch(e){setError("Couldn't clear Sheet.");} }
-    else{ saveFallbackLog([]); setLog([]); }
+  async function refreshAll() {
+    if (!syncUrl) return;
+    const [ov, tk, ck, co, nt, sp, pg, cl, ps, lg] = await Promise.all([
+      pull("fetchSelections","overrides"), pull("fetchTasks","tasks"), pull("fetchChecks","checks"), pull("fetchCOs","cos"), pull("fetchNotes","notes"),
+      pull("fetchSpecs","specs"), pull("fetchProgress","progress"), pull("fetchClar","clar"), pull("fetchProjStatus","status"), pull("fetchLog","entries")
+    ]);
+    if (ov) setSelOv(v=>{ const m=mergeNested(v,ov); lsSet(K.selov,m); return m; });
+    if (tk) setTasks(v=>mergeNested(v,normRecDates(tk,["createdDate","doneDate"])));
+    if (ck) setChecks(v=>mergeNested(v,ck));
+    if (co) setCos(v=>mergeNested(v,normRecDates(co,["date"])));
+    if (nt) setNotes(v=>mergeNested(v,normRecDates(nt,["date"])));
+    if (sp) setSpecsState(v=>mergeNested(v,normRecDates(sp,["approvedDate","updatedDate"])));
+    if (pg) setProgress(v=>mergeNested(v,normRecDates(pg,["date"])));
+    if (cl) setClars(v=>mergeNested(v,normRecDates(cl,["date","resolvedDate"])));
+    importLegacyLog(lg, nt);
+    if (ps) setPstatus(v=>Object.assign({},v,ps));
   }
 
-  function handleSaveKey(){ const k=keyDraft.trim(); if(!k) return; setApiKey(k); saveKey(k); setKeyDraft(""); setKeyMsg("✓ Key saved"); setTimeout(()=>setKeyMsg(""),2000); }
-  function handleClearKey(){ setApiKey(""); saveKey(""); setKeyMsg("Key cleared"); setTimeout(()=>setKeyMsg(""),2000); }
-  function handleSaveSyncUrl(){ const u=syncUrlDraft.trim(); if(!u) return; setSyncUrl(u); saveSyncUrl(u); setSyncUrlDraft(""); setSyncMsg("✓ Sync URL saved"); setShowSyncSetup(false); setTimeout(()=>setSyncMsg(""),3000); }
-  function handleClearSyncUrl(){ setSyncUrl(""); saveSyncUrl(""); setShowSyncSetup(true); setSyncMsg("Sync disconnected"); setTimeout(()=>setSyncMsg(""),3000); }
+  // ── v6 daily log → notes (one-time, deduped by id) ──
+  function logToNote(e) {
+    const pid2 = e.projectId || "superior-ct"; const d = normDate(e.date); if (!d) return null;
+    const qa = (e.qa||[]).filter(x=>x.q).map(x=>"Q: "+x.q+"\nA: "+(x.a||"(no answer)")).join("\n");
+    const text = "Daily log (v6)"+(qa?"\n"+qa:"")+(e.analysis?"\n\n"+e.analysis:"");
+    return { pid:pid2, note:{ id:"log_"+pid2+"_"+d, text, date:d, createdAt:toDate(d).getTime(), source:"log" } };
+  }
+  function importLegacyLog(serverEntries, serverNotes) {
+    const entries = (serverEntries||[]).concat(lsGet("ard_dash_log_fallback",[])||[]);
+    if (!entries.length) return;
+    const have = mergeNested(lsGet(K.notes,{}), serverNotes||{});
+    const add = {}; const toPost = [];
+    entries.forEach(e => { const r = logToNote(e); if (!r) return; if ((have[r.pid]||{})[r.note.id] || (add[r.pid]||{})[r.note.id]) return; add[r.pid] = add[r.pid]||{}; add[r.pid][r.note.id] = r.note; toPost.push(r); });
+    if (!toPost.length) return;
+    setNotes(v=>mergeNested(v,add));
+    toPost.forEach(r => { if (syncUrl) fetch(syncUrl,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({action:"setNote",projectId:r.pid,note:r.note})}).catch(()=>{}); });
+  }
+  useEffect(()=>{ if (!syncUrl) importLegacyLog([], {}); },[]);
 
-  async function fetchBriefing() {
-    if(!apiKey){ setError("Add your Claude API key below first."); return; }
-    setLoading(true); setError(""); setBriefing(""); setSubmitted(false); setAnswers({1:"",2:"",3:"",4:""});
-    try{
-      const res=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json","x-api-key":apiKey,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},body:JSON.stringify({model:"claude-sonnet-4-6",max_tokens:1000,system:buildSystemPrompt(project,today,activePhases,upcomingPhases,todayEvents,effSelections,openTasks,projNotes.filter(n=>{const d7=new Date(today);d7.setDate(d7.getDate()-7);return n.date>=localDateStr(d7);})),messages:[{role:"user",content:"Generate today's field briefing."}]})});
-      const data=await res.json(); if(data.error) throw new Error(data.error.message);
-      setBriefing((data.content&&data.content[0]&&data.content[0].text)||"");
-    }catch(e){ setError(friendlyApiError(e)); }
-    setLoading(false);
+  // ── project switch ──
+  function switchProject(id) {
+    setActiveId(id); lsSetStr(K.active,id);
+    ciLock.current = false; setBrief(lsGet(briefKey(id,todayStr),null)); setCiAns({}); setCiErr("");
+    setChat(lsGet(chatKey(id),[])); setEditKey(null); setDraft(null); setAdding(false); setExpandedHold(null); setShowPkg(false);
+  }
+  function setProjectStatus(st) {
+    setPstatus(v=>Object.assign({},v,{[pid]:st}));
+    postAction({action:"setProjStatus",projectId:pid,status:st});
+    if (st==="Archived" && !showArch) { const next = PROJECTS.find(p=>p.id!==pid && statusOf(p)!=="Archived"); if (next) switchProject(next.id); }
   }
 
-  async function submitAnswers() {
-    if(!apiKey){ setError("Add your Claude API key below first."); return; }
-    const questions=parseQuestions(briefing);
-    const qaText=questions.map((q,i)=>`Q${i+1}: ${q}\nA: ${answers[i+1]||"(no answer)"}`).join("\n\n");
-    setLoading(true);
-    try{
-      const res=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json","x-api-key":apiKey,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},body:JSON.stringify({model:"claude-sonnet-4-6",max_tokens:1000,system:`You are a construction PM for ${project.gc}, ${project.name}, ${project.location}. Today is ${fmt(today)}.`,messages:[{role:"user",content:`Based on today's field briefing and the GC's answers, generate:\n1. A SHORT status summary (2-3 sentences).\n2. ACTION ITEMS — numbered follow-ups with deadlines.\n3. FLAGS — issues or risks surfaced by the answers.\nUnder 300 words. Field-literal.\n\nBRIEFING:\n${briefing}\n\nGC'S ANSWERS:\n${qaText}`}]})});
-      const data=await res.json(); const analysis=(data.content&&data.content[0]&&data.content[0].text)||"";
-      const entry={projectId:project.id,projectName:project.name,date:localDateStr(today),dateLabel:fmt(today),activePhases:activePhases.map(p=>p.label),qa:questions.map((q,i)=>({q,a:answers[i+1]||""})),analysis,briefing};
-      await pushEntry(entry); setSubmitted(true); setTodayAnalysis(analysis);
-    }catch(e){ setError(friendlyApiError(e)); }
-    setLoading(false);
+  // ── mutations (pure helpers return new state objects) ──
+  function withRec(state, key, id, rec) { const n = Object.assign({},state); n[pid] = Object.assign({},n[pid]||{}); if (rec===null) delete n[pid][id]; else n[pid][id] = rec; return n; }
+  function saveSpec(key, patch) {
+    const cur = specs.find(s=>s.key===key) || Object.assign({},EMPTY_SPEC,{key,custom:true});
+    const rec = stripComputed(Object.assign({}, cur, patch, { key, updatedDate:todayStr }));
+    setSpecsState(v=>withRec(v,null,key,rec));
+    postAction({action:"setSpec",projectId:pid,spec:rec});
+    return rec;
   }
+  function deleteSpec(key) { setSpecsState(v=>withRec(v,null,key,null)); postAction({action:"deleteSpec",projectId:pid,key}); }
+  function resetSpec(key) { setSpecsState(v=>withRec(v,null,key,null)); setSelOv(v=>{ const n=Object.assign({},v); if(n[pid]){ n[pid]=Object.assign({},n[pid]); delete n[pid][key]; } lsSet(K.selov,n); return n; }); postAction({action:"deleteSpec",projectId:pid,key}); postAction({action:"setSelection",projectId:pid,key,value:""}); }
+  function makeTask(text, source) { return { id:uid("t"), text, done:false, source:source||"manual", createdDate:todayStr, doneDate:"" }; }
+  function addTask(text, source) { const v=(text||"").trim(); if(!v) return; const t=makeTask(v,source); setTasks(s=>withRec(s,null,t.id,t)); postAction({action:"setTask",projectId:pid,task:t}); }
+  function toggleTask(t) { const t2=Object.assign({},t,{done:!t.done,doneDate:!t.done?todayStr:""}); setTasks(s=>withRec(s,null,t.id,t2)); postAction({action:"setTask",projectId:pid,task:t2}); }
+  function removeTask(t) { if(!window.confirm("Delete this task?")) return; setTasks(s=>withRec(s,null,t.id,null)); postAction({action:"deleteTask",projectId:pid,taskId:t.id}); }
+  function toggleCheck(k,val) { setChecks(s=>withRec(s,null,k,val?true:null)); postAction({action:"setCheck",projectId:pid,key:k,checked:!!val}); }
+  function addNote(text, source) { const v=(text||"").trim(); if(!v) return; const n={id:uid("n"),text:v,date:todayStr,createdAt:Date.now(),source:source||"manual"}; setNotes(s=>withRec(s,null,n.id,n)); postAction({action:"setNote",projectId:pid,note:n}); }
+  function removeNote(n) { if(!window.confirm("Delete this note?")) return; setNotes(s=>withRec(s,null,n.id,null)); postAction({action:"deleteNote",projectId:pid,noteId:n.id}); }
+  function addCO() { const t=coTitle.trim(); const a=parseFloat(coAmount); if(!t||isNaN(a)) return; const co={id:uid("c"),title:t,amount:a,status:coStatus,date:todayStr,notes:""}; setCos(s=>withRec(s,null,co.id,co)); postAction({action:"setCO",projectId:pid,co}); setCoTitle(""); setCoAmount(""); setCoStatus("Proposed"); }
+  function setCOStatus(co,st) { const c2=Object.assign({},co,{status:st}); setCos(s=>withRec(s,null,co.id,c2)); postAction({action:"setCO",projectId:pid,co:c2}); }
+  function removeCO(co) { if(!window.confirm("Delete this change order?")) return; setCos(s=>withRec(s,null,co.id,null)); postAction({action:"deleteCO",projectId:pid,coId:co.id}); }
+  function addClar() { const q=clQ.trim(); if(!q) return; const a=clA.trim(); const c={id:uid("q"),question:q,answer:a,decidedBy:clBy.trim(),status:a?"Resolved":"Open",date:todayStr,resolvedDate:a?todayStr:"",createdAt:Date.now()}; setClars(s=>withRec(s,null,c.id,c)); postAction({action:"setClar",projectId:pid,clar:c}); setClQ(""); setClA(""); setClBy(""); }
+  function resolveClar(c) { const a=resA.trim(); if(!a) return; const c2=Object.assign({},c,{answer:a,decidedBy:resBy.trim()||c.decidedBy||"",status:"Resolved",resolvedDate:todayStr}); setClars(s=>withRec(s,null,c.id,c2)); postAction({action:"setClar",projectId:pid,clar:c2}); setResolving(null); setResA(""); setResBy(""); }
+  function removeClar(c) { if(!window.confirm("Delete this clarification?")) return; setClars(s=>withRec(s,null,c.id,null)); postAction({action:"deleteClar",projectId:pid,clarId:c.id}); }
+  function setProg(key, rec) { setProgress(s=>withRec(s,null,key,rec)); postAction({action:"setProgress",projectId:pid,key,rec}); }
 
-  async function askIntel() {
-    if(!apiKey){ setIntelChat(c=>[...c,{role:"error",text:"Add your Claude API key first."}]); return; }
-    const q=intelQuestion.trim(); if(!q) return;
-    setIntelChat(c=>[...c,{role:"user",text:q}]); setIntelQuestion(""); setIntelLoading(true);
-    try{
-      const res=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json","x-api-key":apiKey,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},body:JSON.stringify({model:"claude-sonnet-4-6",max_tokens:600,system:buildIntelPrompt(project,q,effSelections,projNotes),messages:[{role:"user",content:q}]})});
-      const data=await res.json(); if(data.error) throw new Error(data.error.message);
-      const answer=(data.content&&data.content[0]&&data.content[0].text)||"";
-      setIntelChat(c=>[...c,{role:"assistant",text:answer}]);
-    }catch(e){ setIntelChat(c=>[...c,{role:"error",text:friendlyApiError(e)}]); }
-    setIntelLoading(false);
+  // ── check-in submit ──
+  async function submitCheckin() {
+    const answered = ciQuestions.some(q => { const a = ciAns[q.id]; return a && (a.choice || (q.kind==="general" && a.text && a.text.trim())); });
+    if (!answered) { setCiErr("Answer at least one question first."); return; }
+    if (ciLock.current) return; ciLock.current = true;
+    try { await submitInner(); }
+    catch (e) { ciLock.current = false; setCiBusy(false); setCiErr("Something went wrong saving the check-in \u2014 your answers are still here, try again. ("+(e&&e.message||e)+")"); }
   }
-
-  function copyToEmail(){
-    if(!briefing) return;
-    const questions=parseQuestions(briefing);
-    const text=[`DAILY FIELD BRIEFING — ${fmt(today)}`,`${project.name} · ${project.location}`,`GC: ${project.gc} · Owner: ${project.owner}`,"─".repeat(50),briefing.replace(/##/g,"").replace(/\n\n+/g,"\n\n"),"─".repeat(50),"REPLY WITH YOUR ANSWERS:",...questions.map((q,i)=>`${i+1}. ${q}\nA: `)].join("\n");
-    try{ navigator.clipboard.writeText(text).then(()=>{ setCopying(true); setTimeout(()=>setCopying(false),2000); }); }catch(e){}
-  }
-
-  function renderBriefing(text){
-    const sections=text.split(/(?=## )/);
-    return sections.map((s,i)=>{
-      const lines=s.trim().split("\n"); const header=lines[0].replace("## ",""); const body=lines.slice(1).join("\n").trim(); const isQA=header==="DAILY Q&A";
-      const hColors={"TODAY'S TASKS":"#06D6A0","WATCH ITEMS":"#FFD60A","DAILY Q&A":"#0066FF","NOTES":"#8B98A4"}; const hc=hColors[header]||C.mut;
-      if(isQA){
-        const questions=parseQuestions(text);
-        return h("div",{key:i,style:{marginBottom:20}},
-          h("div",{style:{fontFamily:"'Space Mono',monospace",fontSize:11,fontWeight:700,color:hc,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:10}},header),
-          ...questions.map((q,qi)=>h("div",{key:qi,style:{marginBottom:14,background:C.panel2,borderRadius:8,padding:"12px 16px",border:`1px solid ${C.hair}`}},
-            h("div",{style:{fontSize:13,color:C.ink,marginBottom:8,lineHeight:1.4}},h("span",{style:{color:hc,fontWeight:700,fontFamily:"'Space Mono',monospace"}},`${qi+1}. `),q),
-            submitted?h("div",{style:{fontSize:13,color:C.qc,fontStyle:"italic"}},answers[qi+1]||"(no answer)"):h("textarea",{value:answers[qi+1]||"",onChange:e=>setAnswers(a=>({...a,[qi+1]:e.target.value})),placeholder:"Type your answer here...",style:{width:"100%",background:C.bg,border:`1px solid ${C.hair}`,borderRadius:6,color:C.ink,fontSize:16,padding:"8px 10px",resize:"vertical",minHeight:60,outline:"none",boxSizing:"border-box"}})
-          ))
-        );
+  async function submitInner() {
+    setCiBusy(true); setCiErr("");
+    const qs = ciQuestions; const lines = []; const changed = { specs:0, phases:0, events:0, tasks:0 };
+    const newTasks = []; const openTexts = openTasks.map(t=>t.text);
+    const queueTask = txt => { if (openTexts.indexOf(txt)<0 && newTasks.indexOf(txt)<0) newTasks.push(txt); };
+    const specJobs = [];
+    const specPatches = {};
+    qs.forEach(q => {
+      const a = ciAns[q.id] || {};
+      if (q.kind === "general") { if (a.text && a.text.trim()) lines.push("Site: "+a.text.trim()); return; }
+      if (!a.choice) return;
+      if (q.kind === "catchup") {
+        if (a.choice === "All done") { q.refs.forEach(id=>setProg("phase::"+id, { status:"done", note:"marked done at catch-up", date:todayStr })); changed.phases += q.refs.length; lines.push("Earlier phases marked done: "+q.refs.length); }
+        else { setProg("meta::catchup_off", { status:"off", note:"", date:todayStr }); lines.push("Earlier phases: will review one at a time"); }
+        return;
       }
-      return h("div",{key:i,style:{marginBottom:20}},h("div",{style:{fontFamily:"'Space Mono',monospace",fontSize:11,fontWeight:700,color:hc,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:8}},header),h("div",{style:{fontSize:13,color:C.ink,lineHeight:1.7,whiteSpace:"pre-wrap"}},body));
+      if (q.kind === "phase") {
+        const map = {"Done":"done","In progress":"active","Behind":"behind","Not started":"notstarted"};
+        setProg("phase::"+q.ref, { status:map[a.choice], note:(a.text||"").trim(), date:todayStr }); changed.phases++;
+        lines.push(q.label+": "+a.choice+(a.text&&a.text.trim()?" — "+a.text.trim():""));
+      } else if (q.kind === "event") {
+        setProg(q.ref, { status:a.choice, note:"", date:todayStr }); changed.events++;
+        lines.push(q.label+": "+a.choice);
+        if (a.choice==="Not yet" && q.evType==="hold") queueTask("Schedule "+q.label+" inspection with the city ("+shortDate(q.date)+")");
+        if (a.choice==="At risk") queueTask("Resolve at-risk item: "+q.label);
+        if (a.choice.indexOf("Failed")===0) queueTask("Correct + re-inspect: "+q.label);
+      } else if (q.kind === "spec") {
+        if (a.choice==="Yes" && a.text && a.text.trim()) specJobs.push({ q, a, mode:"set" });
+        else if (a.choice==="Yes") { specPatches[q.ref] = { status:"Selected", notes:"Chosen — details to follow", source:"check-in" }; lines.push(q.item+": chosen (details to follow)"); }
+        else if (a.choice==="N/A") { specPatches[q.ref] = { status:"N/A", source:"check-in" }; lines.push(q.item+": N/A"); }
+        else if (a.choice==="Not yet") { lines.push(q.item+": not chosen yet"); if (q.overdue) queueTask("Get owner decision: "+q.item+" ("+q.category+") — overdue"); }
+        if (a.choice==="Yes" && a.approved) specPatches[q.ref] = Object.assign(specPatches[q.ref]||{}, { ownerApproved:true, approvedDate:todayStr });
+      } else if (q.kind === "specdetail") {
+        if (a.choice==="Yes" && a.text && a.text.trim()) specJobs.push({ q, a, mode:"detail" });
+      }
     });
+    if (specJobs.length) {
+      let parsed = {};
+      if (apiKey) {
+        try { parsed = await parseSpecAnswers(apiKey, specJobs.map(j=>({ id:j.q.ref, category:j.q.category, item:j.q.item, room:j.q.room, answer:j.a.text.trim() }))); }
+        catch(e) { setCiErr("Couldn’t read answers into fields ("+friendlyApiError(e)+") — saved your wording in Notes on each spec."); }
+      }
+      specJobs.forEach(({q,a,mode}) => {
+        const f = parsed[q.ref] || {}; const fields = {};
+        SPEC_FIELD_KEYS.forEach(k=>{ if (f[k] && String(f[k]).trim()) fields[k] = String(f[k]).trim(); });
+        if (!Object.keys(fields).length) fields.notes = a.text.trim();
+        const base = mode==="set" ? Object.assign({ notes:"" }, fields, { status:"Selected", source:"check-in" }) : Object.assign({}, fields, { source:"check-in" });
+        specPatches[q.ref] = Object.assign(specPatches[q.ref]||{}, base);
+        const cur = specs.find(s=>s.key===q.ref) || {};
+        lines.push(q.item+": "+specSummary(Object.assign({},cur,base)));
+      });
+    }
+    Object.keys(specPatches).forEach(k=>{ saveSpec(k, specPatches[k]); changed.specs++; });
+    newTasks.forEach(t=>addTask(t,"check-in")); changed.tasks = newTasks.length;
+    if (lines.length) addNote("Check-in — "+lines.join("\n"), "check-in");
+    const nb = Object.assign({}, brief||{}, { checkin:{ questions:qs, answers:ciAns, submitted:true, changed } });
+    setBrief(nb); setCiBusy(false); // lock stays on until "Answer again", project switch, or a new day
+  }
+  function redoCheckin() { ciLock.current = false; setBrief(Object.assign({},brief||{},{checkin:null})); setCiAns({}); }
+
+  async function getBriefing() {
+    if (!apiKey) { note("Add your Claude API key in Settings first"); return; }
+    setBrBusy(true);
+    try {
+      const ctx = buildContext(project, specs, progress, projTasks, projNotes, projCOs, projClars, todayStr);
+      const sys = "You are a construction PM assistant for Advanced Remodel & Design (GC Osmar Ramirez). Today is "+fmt(today)+". Use only the project data given. Never invent quantities, products, colors, dates, or code requirements; say what is unknown.\n\n"+ctx;
+      const user = "Give me today's field briefing, using EXACTLY these headers:\n## TODAY'S TASKS\n3-6 numbered, concrete tasks for today based on actual progress (not just the planned schedule).\n## SCHEDULE RISK\nWhat is behind or at risk and what it threatens downstream — cite dates.\n## DECISIONS NEEDED\nOwner/sub decisions still open that are blocking or will soon block work.\nUnder 350 words. Direct, field-literal.";
+      const txt = await callClaude(apiKey, sys, [{role:"user",content:user}], 1000);
+      setBrief(Object.assign({},brief||{},{ briefing:txt, briefingAt:todayStr }));
+    } catch(e) { note(friendlyApiError(e),6000); }
+    setBrBusy(false);
+  }
+  function promoteBriefing() {
+    const items = parseNumberedList(brief&&brief.briefing, "## TODAY'S TASKS"); let n=0;
+    items.forEach(it=>{ if (openTasks.map(t=>t.text).indexOf(it)<0) { addTask(it,"briefing"); n++; } });
+    note(n?("✓ Added "+n+" task"+(n>1?"s":"")):"Already in tasks");
   }
 
-  // ── TODAY TAB ─────────────────────────────────────────────────────────────
-  const todayTab = h("div",null,
-    h("div",{style:{display:"flex",gap:8,flexWrap:"wrap",marginBottom:20}},
-      activePhases.length===0?h("div",{style:{fontSize:12,color:C.mut,fontFamily:"'Space Mono',monospace"}},today<toDate(project.startDate)?"Project has not started yet":"Project complete"):activePhases.map(p=>h("div",{key:p.id,style:{background:p.color+"22",border:`1px solid ${p.color}`,borderRadius:20,padding:"4px 12px",fontSize:11,fontWeight:700,color:p.color,fontFamily:"'Space Mono',monospace"}},p.trade))
-    ),
-    ...todayEvents.map((e,i)=>h("div",{key:i,style:{background:e.color+"18",border:`1px solid ${e.color}`,borderRadius:8,padding:"8px 14px",fontSize:12,color:e.color,fontWeight:700,marginBottom:8,fontFamily:"'Space Mono',monospace"}},e.label)),
-    upcomingEvents.length>0&&h("div",{style:{background:C.panel2,border:`1px solid ${C.hair}`,borderRadius:8,padding:"10px 14px",marginBottom:12}},
-      h("div",{style:{fontFamily:"'Space Mono',monospace",fontSize:10,fontWeight:700,color:C.mut,letterSpacing:"0.1em",marginBottom:7}},"NEXT 7 DAYS"),
-      ...upcomingEvents.map((e,i)=>h("div",{key:i,style:{display:"flex",gap:10,fontSize:12,marginBottom:5,alignItems:"baseline"}},
-        h("span",{style:{fontFamily:"'Space Mono',monospace",color:C.mut,minWidth:48,flexShrink:0}},toDate(e.date).toLocaleDateString("en-US",{month:"short",day:"numeric"})),
-        h("span",{style:{color:e.color,fontWeight:700,lineHeight:1.35}},e.label)
-      ))
-    ),
-    (dlOverdue.length>0||dlSoon.length>0)&&h("div",{onClick:()=>{setTab("intel");setIntelTab("selections");},style:{background:(dlOverdue.length?"#E6394618":"#FFD60A18"),border:`1px solid ${dlOverdue.length?C.crit:C.warn}`,borderRadius:8,padding:"9px 14px",fontSize:12,fontWeight:700,color:dlOverdue.length?C.crit:C.warn,marginBottom:8,cursor:"pointer",fontFamily:"'Space Mono',monospace",lineHeight:1.4}},
-      "\u26A0 "+(dlOverdue.length?(dlOverdue.length+" selection"+(dlOverdue.length>1?"s":"")+" overdue"):"")+((dlOverdue.length&&dlSoon.length)?" \u00b7 ":"")+(dlSoon.length?(dlSoon.length+" due within 7 days"):"")+" \u2014 tap to review"
-    ),
-    prepHolds.length>0&&h("div",{style:{background:C.panel2,border:`1px solid ${C.crit}`,borderRadius:8,padding:"10px 14px",marginBottom:12}},
-      h("div",{style:{fontFamily:"'Space Mono',monospace",fontSize:10,fontWeight:700,color:C.crit,letterSpacing:"0.1em",marginBottom:7}},"INSPECTION PREP"),
-      ...prepHolds.map((e,i)=>{
-        const items=(INSPECTION_CHECKLISTS[project.id]||{})[e.date]||[];
-        const isOpen=expandedHold===e.date;
-        const doneCt=items.filter((it,ix)=>checks[project.id]&&checks[project.id][e.date+"::"+ix]).length;
-        return h("div",{key:i,style:{marginBottom:isOpen?12:7}},
-          h("div",{onClick:()=>setExpandedHold(isOpen?null:e.date),style:{display:"flex",justifyContent:"space-between",alignItems:"baseline",cursor:"pointer",gap:10}},
-            h("div",{style:{fontSize:12,fontWeight:700,color:C.ink,lineHeight:1.35}},
-              h("span",{style:{fontFamily:"'Space Mono',monospace",color:C.mut,marginRight:8}},shortDate(e.date)),
-              e.label.replace(/^[^A-Za-z]*HOLD[^A-Za-z]*/,"")
-            ),
-            h("span",{style:{fontFamily:"'Space Mono',monospace",fontSize:10,color:doneCt===items.length?C.qc:C.mut,flexShrink:0}},doneCt+"/"+items.length+(isOpen?" \u25B4":" \u25BE"))
+  async function ask() {
+    const q = askQ.trim(); if (!q) return;
+    if (!apiKey) { setChat(c=>c.concat([{role:"error",text:"Add your Claude API key in Settings first."}])); return; }
+    const history = []; chat.filter(m=>m.role==="user"||m.role==="assistant").slice(-8).forEach(m=>{ if (history.length && history[history.length-1].role===m.role) history[history.length-1] = {role:m.role,content:m.text}; else history.push({role:m.role,content:m.text}); });
+    while (history.length && history[0].role!=="user") history.shift();
+    if (history.length && history[history.length-1].role==="user") history.pop();
+    setChat(c=>c.concat([{role:"user",text:q}])); setAskQ(""); setAskBusy(true);
+    try {
+      const ctx = buildContext(project, specs, progress, projTasks, projNotes, projCOs, projClars, todayStr);
+      const sys = "You are the field assistant for Advanced Remodel & Design on this project. Today is "+fmt(today)+". Answer ONLY from the project data below. If something is not in the data, say it isn't recorded — never guess quantities, products, colors, or code requirements. Cite dates from notes/decisions when relevant. Field-literal, concise, under 150 words unless the question needs more.\n\n"+ctx;
+      const txt = await callClaude(apiKey, sys, history.concat([{role:"user",content:q}]), 700);
+      setChat(c=>c.concat([{role:"assistant",text:txt}]));
+    } catch(e) { setChat(c=>c.concat([{role:"error",text:friendlyApiError(e)}])); }
+    setAskBusy(false);
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // UI PIECES
+  // ══════════════════════════════════════════════════════════════════════════
+  const S = {
+    card:{background:C.panel2,border:`1px solid ${C.hair}`,borderRadius:10,padding:"12px 14px",marginBottom:12},
+    label:{fontFamily:MONO,fontSize:10,fontWeight:700,color:C.mut,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:8},
+    input:{width:"100%",background:C.bg,border:`1px solid ${C.hair}`,borderRadius:7,color:C.ink,fontSize:16,padding:"9px 11px",outline:"none",boxSizing:"border-box",fontFamily:"'Archivo',sans-serif"},
+    btn:(bg,fg)=>({background:bg,border:"none",borderRadius:8,color:fg||"#fff",fontWeight:800,fontSize:13,padding:"10px 16px",cursor:"pointer"}),
+    ghost:{background:"none",border:`1px solid ${C.hair}`,borderRadius:6,color:C.mut,fontSize:11,padding:"5px 11px",cursor:"pointer",fontFamily:MONO},
+    chip:(col)=>({display:"inline-block",fontFamily:MONO,fontSize:9.5,fontWeight:700,color:col,border:`1px solid ${col}`,borderRadius:10,padding:"1px 7px",marginLeft:6,whiteSpace:"nowrap"}),
+  };
+  function Seg(opts, val, set) {
+    return h("div",{style:{display:"flex",gap:6,marginBottom:14}}, opts.map(([id,lab])=>h("button",{key:id,onClick:()=>set(id),style:{flex:1,padding:"8px 4px",background:val===id?C.blue:C.panel2,border:`1px solid ${val===id?C.blue:C.hair}`,borderRadius:7,color:val===id?"#fff":C.mut,fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:MONO}},lab)));
+  }
+  function Box(checked, onClick) { return h("span",{onClick,style:{width:18,height:18,borderRadius:5,flexShrink:0,marginTop:1,cursor:"pointer",border:`1.5px solid ${checked?C.qc:C.hair}`,background:checked?C.qc:"transparent",color:"#0B0E11",fontSize:12,fontWeight:900,textAlign:"center",lineHeight:"17px",display:"inline-block"}},checked?"✓":""); }
+
+  // ── check-in card ──
+  function checkinCard() {
+    if (ciSubmitted) {
+      const ch = (brief.checkin && brief.checkin.changed) || {};
+      return h("div",{style:Object.assign({},S.card,{borderColor:C.qc})},
+        h("div",{style:Object.assign({},S.label,{color:C.qc})},"✓ Today's check-in saved"),
+        h("div",{style:{fontSize:13,color:C.ink,lineHeight:1.6}},
+          [ch.specs?ch.specs+" spec"+(ch.specs>1?"s":"")+" updated":null, ch.phases?ch.phases+" phase status"+(ch.phases>1?"es":""):null, ch.events?ch.events+" inspection/procurement update"+(ch.events>1?"s":""):null, ch.tasks?ch.tasks+" task"+(ch.tasks>1?"s":"")+" added":null].filter(Boolean).join(" · ") || "Answers logged to Notes"),
+        ciErr&&h("div",{style:{fontSize:12,color:C.warn,marginTop:6}},ciErr),
+        h("button",{onClick:redoCheckin,style:Object.assign({},S.ghost,{marginTop:10})},"Answer again")
+      );
+    }
+    return h("div",{style:S.card},
+      h("div",{style:S.label},"Today's check-in"),
+      h("div",{style:{fontSize:12,color:C.mut,marginBottom:12,lineHeight:1.5}},"Answers update the schedule status and write straight into the specs."),
+      ...ciQuestions.map(q=>{
+        const a = ciAns[q.id] || {};
+        const setA = patch => setCiAns(v=>Object.assign({},v,{[q.id]:Object.assign({},v[q.id]||{},patch)}));
+        return h("div",{key:q.id,style:{padding:"10px 0",borderTop:`1px solid ${C.hair}`}},
+          h("div",{style:{fontSize:13.5,color:C.ink,lineHeight:1.45,fontWeight:600}},q.text),
+          q.hint&&h("div",{style:{fontFamily:MONO,fontSize:10,color:(q.overdue||/Overdue/.test(q.hint))?C.crit:C.mut,marginTop:3}},q.hint),
+          q.options.length>0&&h("div",{style:{display:"flex",gap:6,flexWrap:"wrap",marginTop:8}},
+            q.options.map(o=>h("button",{key:o,onClick:()=>setA({choice:a.choice===o?"":o}),style:{padding:"7px 12px",borderRadius:16,fontSize:12,fontWeight:700,cursor:"pointer",background:a.choice===o?C.blue:"transparent",color:a.choice===o?"#fff":C.ink,border:`1px solid ${a.choice===o?C.blue:C.hair}`}},o))
           ),
-          isOpen&&h("div",{style:{marginTop:7}},
-            ...items.map((it,ix)=>{
-              const ck=!!(checks[project.id]&&checks[project.id][e.date+"::"+ix]);
-              return h("div",{key:ix,onClick:()=>toggleCheck(e.date+"::"+ix,!ck),style:{display:"flex",gap:9,alignItems:"flex-start",padding:"5px 0",cursor:"pointer"}},
-                h("span",{style:{width:16,height:16,borderRadius:4,flexShrink:0,marginTop:1,border:`1.5px solid ${ck?C.qc:C.hair}`,background:ck?C.qc:"transparent",color:"#0B0E11",fontSize:11,fontWeight:900,textAlign:"center",lineHeight:"15px"}},ck?"\u2713":""),
-                h("span",{style:{fontSize:12.5,color:ck?C.mut:C.ink,textDecoration:ck?"line-through":"none",lineHeight:1.4}},it)
-              );
-            })
-          )
+          ((q.kind==="spec"||q.kind==="specdetail")&&a.choice==="Yes")&&h("div",{style:{marginTop:8}},
+            h("textarea",{value:a.text||"",onChange:e=>setA({text:e.target.value}),placeholder:"What was chosen? Brand, product, color, finish, model/SKU, supplier…",style:Object.assign({},S.input,{minHeight:62,resize:"vertical"})}),
+            q.kind==="spec"&&h("label",{style:{display:"flex",gap:8,alignItems:"center",marginTop:7,fontSize:12.5,color:C.ink,cursor:"pointer"}},
+              h("input",{type:"checkbox",checked:!!a.approved,onChange:e=>setA({approved:e.target.checked})}),"Owner approved this selection")
+          ),
+          (q.kind==="phase"&&(a.choice==="Behind"||a.choice==="In progress"))&&h("input",{type:"text",value:a.text||"",onChange:e=>setA({text:e.target.value}),placeholder:a.choice==="Behind"?"What's holding it up? (optional)":"Note (optional)",style:Object.assign({},S.input,{marginTop:8})}),
+          q.kind==="general"&&h("textarea",{value:a.text||"",onChange:e=>setA({text:e.target.value}),placeholder:"Deliveries, sub updates, owner requests, conditions found…",style:Object.assign({},S.input,{marginTop:8,minHeight:56,resize:"vertical"})})
         );
-      })
-    ),
-    (!briefing&&!loading)&&h("button",{onClick:fetchBriefing,disabled:!apiKey,style:{width:"100%",padding:"14px",background:apiKey?"#1F9E3D":C.panel2,border:apiKey?"none":`1px solid ${C.hair}`,borderRadius:8,color:apiKey?"#fff":C.mut,fontSize:15,fontWeight:800,cursor:apiKey?"pointer":"not-allowed",marginTop:8,letterSpacing:"0.02em"}},apiKey?"Generate Today's Field Briefing":"Add your API key below to begin"),
-    loading&&h("div",{style:{textAlign:"center",padding:"32px",color:C.mut,fontFamily:"'Space Mono',monospace",fontSize:12}},h("span",{className:"spin",style:{fontSize:24,display:"inline-block"}},"↻")," Working…"),
-    error&&h("div",{style:{background:"#E6394618",border:"1px solid #E63946",borderRadius:8,padding:"12px 16px",color:"#E63946",fontSize:13,marginTop:8}},error),
-    (briefing&&!loading)&&h("div",null,
-      h("div",{style:{display:"flex",gap:8,marginBottom:20,marginTop:16}},
-        h("button",{onClick:copyToEmail,style:{flex:1,padding:"9px",background:C.panel2,border:`1px solid ${C.hair}`,borderRadius:7,color:copying?"#06D6A0":C.mut,fontSize:12,cursor:"pointer",fontFamily:"'Space Mono',monospace",fontWeight:700}},copying?"✓ Copied":"Copy as email"),
-        h("button",{onClick:fetchBriefing,style:{flex:1,padding:"9px",background:C.panel2,border:`1px solid ${C.hair}`,borderRadius:7,color:C.mut,fontSize:12,cursor:"pointer",fontFamily:"'Space Mono',monospace",fontWeight:700}},"Regenerate")
-      ),
-      ...renderBriefing(briefing),
-      !submitted?h("button",{onClick:submitAnswers,disabled:loading,style:{width:"100%",padding:"13px",background:"#0066FF",border:"none",borderRadius:8,color:"#fff",fontSize:14,fontWeight:800,cursor:"pointer",marginTop:4,opacity:loading?0.5:1}},"Submit Answers → Generate Action Items"):h("div",null,
-        h("div",{style:{background:"#06D6A018",border:"1px solid #06D6A0",borderRadius:8,padding:"12px 16px",color:"#06D6A0",fontSize:12,fontFamily:"'Space Mono',monospace",fontWeight:700,marginBottom:12,textAlign:"center"}},"✓ Answers logged — see Analysis below"),
-        (todayAnalysis||(log[0]&&log[0].analysis))&&h("div",{style:{background:C.panel2,border:`1px solid ${C.hair}`,borderRadius:8,padding:"16px"}},
-          h("div",{style:{fontFamily:"'Space Mono',monospace",fontSize:11,fontWeight:700,color:"#0066FF",letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:10}},"Action Items & Flags"),
-          h("div",{style:{fontSize:13,color:C.ink,lineHeight:1.7,whiteSpace:"pre-wrap"}},todayAnalysis||(log[0]&&log[0].analysis)),
-          parseActionItems(todayAnalysis||(log[0]&&log[0].analysis)||"").length>0&&h("button",{onClick:promoteActions,style:{marginTop:12,width:"100%",padding:"9px",background:"none",border:"1px solid #0066FF",borderRadius:7,color:"#0066FF",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"'Space Mono',monospace"}},promoteMsg||("Add "+parseActionItems(todayAnalysis||(log[0]&&log[0].analysis)||"").length+" action items to Tasks \u2192"))
-        )
-      )
-    )
-  );
-
-  // ── INTEL TAB ─────────────────────────────────────────────────────────────
-  const intel = PROJECT_INTEL[project.id];
-  const intelTab_ = h("div",{style:{display:"flex",flexDirection:"column",height:"100%"}},
-    // sub-tabs
-    h("div",{style:{display:"flex",gap:6,marginBottom:16}},
-      [["ask","Ask"],["selections","Selections"],["scope","Scope"],["cos","COs"],["notes","Notes"]].map(([id,label])=>
-        h("button",{key:id,onClick:()=>setIntelTab(id),style:{flex:1,padding:"8px 4px",background:intelTab===id?"#0066FF":C.panel2,border:`1px solid ${intelTab===id?"#0066FF":C.hair}`,borderRadius:7,color:intelTab===id?"#fff":C.mut,fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"'Space Mono',monospace"}},label)
-      )
-    ),
-    // ASK sub-tab
-    intelTab==="ask"&&h("div",{style:{display:"flex",flexDirection:"column",gap:0}},
-      h("div",{style:{background:C.panel2,border:`1px solid ${C.hair}`,borderRadius:8,padding:"10px 14px",marginBottom:12,fontSize:12,color:C.mut,lineHeight:1.5}},
-        "Ask anything about this project — quantities, materials, scope, sequence, contacts. E.g. ",h("em",null,'"How much tile is in the master shower?"')," or ",h("em",null,'"What grout color did we pick?"'),
-        intelChat.length>0&&h("button",{onClick:()=>setIntelChat([]),style:{display:"block",marginTop:8,background:"none",border:`1px solid ${C.hair}`,borderRadius:6,color:C.mut,fontSize:10,padding:"3px 10px",cursor:"pointer",fontFamily:"'Space Mono',monospace"}},"Clear chat history")
-      ),
-      // chat history
-      h("div",{style:{minHeight:120,marginBottom:12}},
-        intelChat.length===0&&h("div",{style:{textAlign:"center",padding:"32px 0",color:C.mut,fontFamily:"'Space Mono',monospace",fontSize:11}},"No questions yet — ask something below"),
-        ...intelChat.map((msg,i)=>h("div",{key:i,style:{marginBottom:12,display:"flex",justifyContent:msg.role==="user"?"flex-end":"flex-start"}},
-          h("div",{style:{maxWidth:"85%",background:msg.role==="user"?"#0066FF":msg.role==="error"?"#E6394618":C.panel2,border:msg.role==="error"?"1px solid #E63946":`1px solid ${msg.role==="user"?"#0066FF":C.hair}`,borderRadius:msg.role==="user"?"12px 12px 2px 12px":"12px 12px 12px 2px",padding:"10px 14px",fontSize:13,color:msg.role==="error"?"#E63946":C.ink,lineHeight:1.5,whiteSpace:"pre-wrap"}},msg.text)
-        )),
-        intelLoading&&h("div",{style:{display:"flex",justifyContent:"flex-start",marginBottom:12}},h("div",{style:{background:C.panel2,border:`1px solid ${C.hair}`,borderRadius:"12px 12px 12px 2px",padding:"10px 14px",fontSize:13,color:C.mut,fontFamily:"'Space Mono',monospace"}},h("span",{className:"spin",style:{display:"inline-block"}},"↻")," Thinking…")),
-        h("div",{ref:chatEndRef})
-      ),
-      // input
-      h("div",{style:{display:"flex",gap:8,position:"sticky",bottom:0,background:C.bg,paddingTop:8}},
-        h("input",{type:"text",value:intelQuestion,onChange:e=>setIntelQuestion(e.target.value),onKeyDown:e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();askIntel();}},placeholder:"Ask a question about this project…",style:{flex:1,background:C.panel2,border:`1px solid ${C.hair}`,borderRadius:8,color:C.ink,fontSize:16,padding:"11px 14px",outline:"none",boxSizing:"border-box"}}),
-        h("button",{onClick:askIntel,disabled:intelLoading||!intelQuestion.trim(),style:{background:"#0066FF",border:"none",borderRadius:8,color:"#fff",fontWeight:800,fontSize:20,padding:"0 16px",cursor:intelLoading||!intelQuestion.trim()?"not-allowed":"pointer",opacity:intelLoading||!intelQuestion.trim()?0.4:1}},"↑")
-      )
-    ),
-    // SELECTIONS sub-tab
-    intelTab==="selections"&&h("div",null,
-      h("div",{style:{fontFamily:"'Space Mono',monospace",fontSize:10,color:C.mut,marginBottom:12,lineHeight:1.5}},"Tap Edit to update a selection as it gets confirmed in the field. Edits feed the daily briefing + Ask Anything, and sync to your Sheet."),
-      selSyncNote&&h("div",{style:{fontFamily:"'Space Mono',monospace",fontSize:11,color:C.qc,marginBottom:10}},selSyncNote),
-      effSelections&&Object.entries(effSelections.reduce((acc,s)=>{ (acc[s.category]=acc[s.category]||[]).push(s); return acc; },{})).map(([cat,items])=>
-        h("div",{key:cat,style:{marginBottom:18}},
-          h("div",{style:{fontFamily:"'Space Mono',monospace",fontSize:10,fontWeight:700,color:C.mut,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:6,paddingBottom:4,borderBottom:`1px solid ${C.hair}`}},cat),
-          ...items.map((s,i)=>{
-            const k=selKey(s); const isEditing=editingSel===k;
-            return h("div",{key:i,style:{marginBottom:10}},
-              h("div",{style:{display:"flex",gap:12,fontSize:13,alignItems:"baseline"}},
-                h("div",{style:{color:C.mut,minWidth:130,flexShrink:0}},s.item),
-                !isEditing&&h("div",{style:{flex:1,color:s.value.includes("TBD")?"#FFD60A":C.ink,fontWeight:s.value.includes("TBD")?700:400,lineHeight:1.4}},
-                  s.value,
-                  s.edited&&h("span",{style:{marginLeft:7,fontSize:9,color:C.qc,fontFamily:"'Space Mono',monospace",fontWeight:700}},"EDITED"),
-                  s.deadline&&s.value.includes("TBD")&&h("span",{style:{marginLeft:7,fontSize:9,fontFamily:"'Space Mono',monospace",fontWeight:700,color:(s.deadline<todayStr?C.crit:C.warn)}},"\u26A0 needed by "+shortDate(s.deadline))
-                ),
-                !isEditing&&h("button",{onClick:()=>{setEditingSel(k);setSelDraft(s.value);},style:{background:"none",border:`1px solid ${C.hair}`,borderRadius:5,color:C.mut,fontSize:10,padding:"3px 10px",cursor:"pointer",flexShrink:0,fontFamily:"'Space Mono',monospace"}},"Edit")
-              ),
-              isEditing&&h("div",{style:{marginTop:6}},
-                h("textarea",{value:selDraft,onChange:e=>setSelDraft(e.target.value),autoFocus:true,style:{width:"100%",background:C.bg,border:"1px solid #0066FF",borderRadius:6,color:C.ink,fontSize:16,padding:"9px 11px",resize:"vertical",minHeight:54,outline:"none",boxSizing:"border-box"}}),
-                h("div",{style:{display:"flex",gap:8,marginTop:7,flexWrap:"wrap"}},
-                  h("button",{onClick:()=>saveSelection(k,selDraft),style:{background:"#0066FF",border:"none",borderRadius:6,color:"#fff",fontSize:12,fontWeight:800,padding:"8px 18px",cursor:"pointer"}},"Save"),
-                  s.edited&&h("button",{onClick:()=>saveSelection(k,""),style:{background:"none",border:`1px solid ${C.warn}`,borderRadius:6,color:C.warn,fontSize:11,padding:"8px 12px",cursor:"pointer",fontFamily:"'Space Mono',monospace"}},"Reset to contract"),
-                  h("button",{onClick:()=>{setEditingSel(null);setSelDraft("");},style:{background:"none",border:`1px solid ${C.hair}`,borderRadius:6,color:C.mut,fontSize:11,padding:"8px 12px",cursor:"pointer",fontFamily:"'Space Mono',monospace"}},"Cancel")
-                )
-              )
-            );
-          })
-        )
-      )
-    ),
-    // SCOPE NOTES sub-tab
-    intelTab==="scope"&&h("div",null,
-      intel&&intel.scopeNotes.map((s,i)=>h("div",{key:i,style:{marginBottom:16,background:C.panel2,border:`1px solid ${C.hair}`,borderRadius:8,padding:"12px 14px"}},
-        h("div",{style:{fontFamily:"'Space Mono',monospace",fontSize:10,fontWeight:700,color:"#0066FF",letterSpacing:"0.08em",textTransform:"uppercase",marginBottom:6}},s.area),
-        h("div",{style:{fontSize:13,color:C.ink,lineHeight:1.6}},s.note)
-      ))
-    ),
-    // CHANGE ORDERS sub-tab
-    intelTab==="cos"&&h("div",null,
-      h("div",{style:{background:C.panel2,border:`1px solid ${C.hair}`,borderRadius:8,padding:"12px 14px",marginBottom:14}},
-        h("div",{style:{fontFamily:"'Space Mono',monospace",fontSize:10,fontWeight:700,color:C.mut,letterSpacing:"0.1em",marginBottom:8}},"NEW CHANGE ORDER"),
-        h("input",{type:"text",value:coTitle,onChange:e=>setCoTitle(e.target.value),placeholder:"Description (e.g. Add 2 can lights \u2014 living room)",style:{width:"100%",background:C.bg,border:`1px solid ${C.hair}`,borderRadius:6,color:C.ink,fontSize:16,padding:"9px 11px",outline:"none",boxSizing:"border-box",marginBottom:8}}),
-        h("div",{style:{display:"flex",gap:8}},
-          h("input",{type:"number",inputMode:"decimal",value:coAmount,onChange:e=>setCoAmount(e.target.value),placeholder:"Amount $",style:{flex:1,minWidth:0,background:C.bg,border:`1px solid ${C.hair}`,borderRadius:6,color:C.ink,fontSize:16,padding:"9px 11px",outline:"none",boxSizing:"border-box"}}),
-          h("select",{value:coStatus,onChange:e=>setCoStatus(e.target.value),style:{flex:1,minWidth:0,background:C.bg,border:`1px solid ${C.hair}`,borderRadius:6,color:C.ink,fontSize:14,padding:"9px 8px",outline:"none"}},["Proposed","Approved","Invoiced","Paid"].map(s=>h("option",{key:s,value:s},s))),
-          h("button",{onClick:addCO,disabled:!coTitle.trim()||coAmount==="",style:{background:"#0066FF",border:"none",borderRadius:6,color:"#fff",fontWeight:800,fontSize:13,padding:"0 16px",cursor:(coTitle.trim()&&coAmount!=="")?"pointer":"not-allowed",opacity:(coTitle.trim()&&coAmount!=="")?1:0.4,flexShrink:0}},"Add")
-        )
-      ),
-      coNote&&h("div",{style:{fontFamily:"'Space Mono',monospace",fontSize:11,color:C.qc,marginBottom:10}},coNote),
-      projCOs.length===0&&h("div",{style:{textAlign:"center",padding:"28px 0",color:C.mut,fontFamily:"'Space Mono',monospace",fontSize:12}},"No change orders logged for this project."),
-      ...projCOs.map(co=>h("div",{key:co.id,style:{background:C.panel2,border:`1px solid ${C.hair}`,borderRadius:8,padding:"11px 13px",marginBottom:8}},
-        h("div",{style:{display:"flex",justifyContent:"space-between",gap:10,alignItems:"baseline"}},
-          h("div",{style:{fontSize:13.5,color:C.ink,fontWeight:700,lineHeight:1.4,flex:1}},co.title),
-          h("div",{style:{fontFamily:"'Space Mono',monospace",fontSize:13,fontWeight:700,color:C.ink,flexShrink:0}},fmtMoney(co.amount))
-        ),
-        h("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginTop:7,gap:10}},
-          h("select",{value:co.status,onChange:e=>updateCOStatus(co,e.target.value),style:{background:C.bg,border:`1px solid ${coStatusColor(co.status)}`,borderRadius:6,color:coStatusColor(co.status),fontSize:11,fontWeight:700,padding:"4px 8px",outline:"none",fontFamily:"'Space Mono',monospace"}},["Proposed","Approved","Invoiced","Paid"].map(s=>h("option",{key:s,value:s},s))),
-          h("div",{style:{fontFamily:"'Space Mono',monospace",fontSize:9,color:C.mut}},co.date||""),
-          h("button",{onClick:()=>removeCO(co),style:{background:"none",border:"none",color:C.mut,fontSize:15,cursor:"pointer",padding:"0 2px"}},"\u00d7")
-        )
-      )),
-      projCOs.length>0&&h("div",{style:{background:C.bg,border:`1px solid ${C.hair}`,borderRadius:8,padding:"11px 13px",marginTop:6}},
-        h("div",{style:{fontFamily:"'Space Mono',monospace",fontSize:10,fontWeight:700,color:C.mut,letterSpacing:"0.1em",marginBottom:7}},"TOTALS"),
-        ...["Proposed","Approved","Invoiced","Paid"].map(st=>{
-          const tt=projCOs.filter(c=>c.status===st).reduce((a,c)=>a+(parseFloat(c.amount)||0),0);
-          return tt>0?h("div",{key:st,style:{display:"flex",justifyContent:"space-between",fontSize:12,marginBottom:4}},h("span",{style:{color:coStatusColor(st),fontFamily:"'Space Mono',monospace"}},st),h("span",{style:{fontFamily:"'Space Mono',monospace",color:C.ink}},fmtMoney(tt))):null;
-        }),
-        project.contractBase&&h("div",{style:{display:"flex",justifyContent:"space-between",fontSize:12,marginTop:7,paddingTop:7,borderTop:`1px solid ${C.hair}`}},
-          h("span",{style:{color:C.mut}},"Contract + approved COs"),
-          h("span",{style:{fontFamily:"'Space Mono',monospace",color:C.qc,fontWeight:700}},fmtMoney(project.contractBase+projCOs.filter(c=>c.status==="Approved"||c.status==="Invoiced"||c.status==="Paid").reduce((a,c)=>a+(parseFloat(c.amount)||0),0)))
-        ),
-        !project.contractBase&&h("div",{style:{fontSize:10,color:C.mut,marginTop:7,paddingTop:7,borderTop:`1px solid ${C.hair}`,fontFamily:"'Space Mono',monospace",lineHeight:1.5}},"Contract base not on file (payment schedule missing) \u2014 totals shown are CO amounts only")
-      )
-    ),
-    // NOTES sub-tab
-    intelTab==="notes"&&h("div",null,
-      h("div",{style:{fontFamily:"'Space Mono',monospace",fontSize:10,color:C.mut,marginBottom:10,lineHeight:1.5}},"Jot anything \u2014 sub conversations, field conditions, owner decisions, measurements. Notes feed Ask Anything and the daily briefing, and sync to your Sheet."),
-      h("div",{style:{marginBottom:14}},
-        h("textarea",{value:noteDraft,onChange:e=>setNoteDraft(e.target.value),placeholder:"e.g. Plumber says drain relocation needs 2\u2033 more depth than plan \u2014 owner OK'd moving wall 3\u2033\u2026",style:{width:"100%",background:C.panel2,border:`1px solid ${C.hair}`,borderRadius:8,color:C.ink,fontSize:16,padding:"10px 13px",resize:"vertical",minHeight:70,outline:"none",boxSizing:"border-box"}}),
-        h("button",{onClick:addNote,disabled:!noteDraft.trim(),style:{marginTop:8,width:"100%",padding:"11px",background:noteDraft.trim()?"#1F9E3D":C.panel2,border:noteDraft.trim()?"none":`1px solid ${C.hair}`,borderRadius:8,color:noteDraft.trim()?"#fff":C.mut,fontSize:13,fontWeight:800,cursor:noteDraft.trim()?"pointer":"not-allowed"}},"Add Note")
-      ),
-      noteMsg&&h("div",{style:{fontFamily:"'Space Mono',monospace",fontSize:11,color:C.qc,marginBottom:10}},noteMsg),
-      projNotes.length===0&&h("div",{style:{textAlign:"center",padding:"28px 0",color:C.mut,fontFamily:"'Space Mono',monospace",fontSize:12}},"No notes yet for this project."),
-      ...projNotes.map(n=>h("div",{key:n.id,style:{background:C.panel2,border:`1px solid ${C.hair}`,borderRadius:8,padding:"11px 13px",marginBottom:8}},
-        h("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"baseline",gap:10,marginBottom:5}},
-          h("div",{style:{fontFamily:"'Space Mono',monospace",fontSize:10,fontWeight:700,color:C.accent}},shortDate(n.date)),
-          h("button",{onClick:()=>removeNote(n),style:{background:"none",border:"none",color:C.mut,fontSize:15,cursor:"pointer",padding:"0 2px",flexShrink:0}},"\u00d7")
-        ),
-        h("div",{style:{fontSize:13.5,color:C.ink,lineHeight:1.55,whiteSpace:"pre-wrap"}},n.text)
-      ))
-    )
-  );
-
-  // ── LOG TAB ───────────────────────────────────────────────────────────────
-  const visibleLog = logFilter==="current"?log.filter(e=>e.projectId===project.id):log;
-  const logTab_ = h("div",null,
-    h("div",{style:{display:"flex",gap:8,marginBottom:16}},
-      h("button",{onClick:()=>setLogFilter("current"),style:{flex:1,padding:"8px",background:logFilter==="current"?"#1F9E3D":C.panel2,border:`1px solid ${logFilter==="current"?"#1F9E3D":C.hair}`,borderRadius:7,color:logFilter==="current"?"#fff":C.mut,fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"'Space Mono',monospace"}},"This project"),
-      h("button",{onClick:()=>setLogFilter("all"),style:{flex:1,padding:"8px",background:logFilter==="all"?"#1F9E3D":C.panel2,border:`1px solid ${logFilter==="all"?"#1F9E3D":C.hair}`,borderRadius:7,color:logFilter==="all"?"#fff":C.mut,fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"'Space Mono',monospace"}},"All projects")
-    ),
-    logLoading&&h("div",{style:{textAlign:"center",padding:"24px",color:C.mut,fontFamily:"'Space Mono',monospace",fontSize:12}},"Loading log…"),
-    (!logLoading&&visibleLog.length===0)&&h("div",{style:{textAlign:"center",padding:"48px",color:C.mut,fontFamily:"'Space Mono',monospace",fontSize:12}},"No log entries yet."),
-    !logLoading&&visibleLog.map((entry,i)=>h("div",{key:i,style:{background:C.panel2,border:`1px solid ${C.hair}`,borderRadius:10,padding:"16px",marginBottom:16}},
-      h("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}},h("div",{style:{fontFamily:"'Space Mono',monospace",fontSize:11,fontWeight:700,color:C.accent}},entry.dateLabel),h("div",{style:{fontSize:11,color:C.mut,fontFamily:"'Space Mono',monospace"}},(entry.activePhases||[]).slice(0,2).join(" · "))),
-      logFilter==="all"&&entry.projectName&&h("div",{style:{fontSize:11,color:C.proc,fontFamily:"'Space Mono',monospace",fontWeight:700,marginBottom:10}},entry.projectName),
-      ...(entry.qa||[]).map((item,j)=>h("div",{key:j,style:{marginTop:10,marginBottom:10,paddingBottom:10,borderBottom:j<entry.qa.length-1?`1px solid ${C.hair}`:"none"}},h("div",{style:{fontSize:12,color:C.mut,marginBottom:3}},`Q${j+1}: ${item.q}`),h("div",{style:{fontSize:13,color:C.ink}},item.a||"(no answer)"))),
-      entry.analysis&&h("div",{style:{marginTop:12,background:C.bg,borderRadius:7,padding:"10px 12px",fontSize:12,color:C.ink,lineHeight:1.6,whiteSpace:"pre-wrap",borderLeft:"3px solid #0066FF"}},entry.analysis)
-    )),
-    log.length>0&&h("button",{onClick:clearAllLog,style:{width:"100%",padding:"9px",background:"transparent",border:`1px solid ${C.crit}`,borderRadius:7,color:C.crit,fontSize:12,cursor:"pointer",fontFamily:"'Space Mono',monospace",marginTop:8}},"Clear log (all projects)")
-  );
-
-  // \u2500\u2500 TASKS TAB \u2500\u2500
-  function taskRow(t) {
-    return h("div",{key:t.id,style:{display:"flex",gap:10,alignItems:"flex-start",background:C.panel2,border:`1px solid ${C.hair}`,borderRadius:8,padding:"10px 12px",marginBottom:8}},
-      h("span",{onClick:()=>toggleTask(t),style:{width:18,height:18,borderRadius:5,flexShrink:0,marginTop:1,cursor:"pointer",border:`1.5px solid ${t.done?C.qc:C.hair}`,background:t.done?C.qc:"transparent",color:"#0B0E11",fontSize:12,fontWeight:900,textAlign:"center",lineHeight:"17px"}},t.done?"\u2713":""),
-      h("div",{style:{flex:1}},
-        h("div",{style:{fontSize:13.5,color:t.done?C.mut:C.ink,textDecoration:t.done?"line-through":"none",lineHeight:1.45}},t.text),
-        h("div",{style:{fontFamily:"'Space Mono',monospace",fontSize:9,color:C.mut,marginTop:3}},(t.source==="briefing"?"from briefing \u00b7 ":"")+(t.done?("done "+(t.doneDate||"")):("added "+(t.createdDate||""))))
-      ),
-      h("button",{onClick:()=>removeTask(t),style:{background:"none",border:"none",color:C.mut,fontSize:15,cursor:"pointer",padding:"0 2px",flexShrink:0}},"\u00d7")
+      }),
+      h("button",{onClick:submitCheckin,disabled:ciBusy,style:Object.assign({},S.btn(C.blue),{width:"100%",marginTop:12,opacity:ciBusy?0.5:1})},ciBusy?"Saving…":"Save check-in → update specs + schedule"),
+      ciErr&&h("div",{style:{fontSize:12,color:C.warn,marginTop:8}},ciErr)
     );
   }
-  const tasksTab_ = h("div",null,
-    h("div",{style:{display:"flex",gap:8,marginBottom:14}},
-      h("input",{type:"text",value:taskDraft,onChange:e=>setTaskDraft(e.target.value),onKeyDown:e=>{if(e.key==="Enter"){addTask(taskDraft);}},placeholder:"Add a task\u2026",style:{flex:1,background:C.panel2,border:`1px solid ${C.hair}`,borderRadius:8,color:C.ink,fontSize:16,padding:"10px 13px",outline:"none",boxSizing:"border-box"}}),
-      h("button",{onClick:()=>addTask(taskDraft),disabled:!taskDraft.trim(),style:{background:"#1F9E3D",border:"none",borderRadius:8,color:"#fff",fontWeight:800,fontSize:13,padding:"0 16px",cursor:taskDraft.trim()?"pointer":"not-allowed",opacity:taskDraft.trim()?1:0.4}},"Add")
+
+  function tasksBlock() {
+    return h("div",{style:S.card},
+      h("div",{style:S.label},"Tasks"+(openTasks.length?" ("+openTasks.length+" open)":"")),
+      h("div",{style:{display:"flex",gap:8,marginBottom:10}},
+        h("input",{type:"text",value:taskDraft,onChange:e=>setTaskDraft(e.target.value),onKeyDown:e=>{if(e.key==="Enter"){addTask(taskDraft);setTaskDraft("");}},placeholder:"Add a task…",style:S.input}),
+        h("button",{onClick:()=>{addTask(taskDraft);setTaskDraft("");},disabled:!taskDraft.trim(),style:Object.assign({},S.btn(C.accent),{opacity:taskDraft.trim()?1:0.4})},"Add")
+      ),
+      openTasks.length===0&&h("div",{style:{fontSize:12,color:C.mut,fontFamily:MONO}},"No open tasks."),
+      ...openTasks.map(t=>taskRow(t)),
+      doneTasks.length>0&&h("button",{onClick:()=>setShowDone(!showDone),style:Object.assign({},S.ghost,{marginTop:6})},(showDone?"Hide":"Show")+" done ("+doneTasks.length+")"),
+      ...(showDone?doneTasks.map(t=>taskRow(t)):[])
+    );
+  }
+  function taskRow(t) {
+    return h("div",{key:t.id,style:{display:"flex",gap:10,alignItems:"flex-start",padding:"7px 0",borderTop:`1px solid ${C.hair}`}},
+      Box(t.done,()=>toggleTask(t)),
+      h("div",{style:{flex:1}},
+        h("div",{style:{fontSize:13.5,color:t.done?C.mut:C.ink,textDecoration:t.done?"line-through":"none",lineHeight:1.45}},t.text),
+        h("div",{style:{fontFamily:MONO,fontSize:9,color:C.mut,marginTop:2}},(t.source&&t.source!=="manual"?"from "+t.source+" · ":"")+(t.done?"done "+(t.doneDate||""):"added "+(t.createdDate||"")))
+      ),
+      h("button",{onClick:()=>removeTask(t),style:{background:"none",border:"none",color:C.mut,fontSize:16,cursor:"pointer"}},"×")
+    );
+  }
+
+  function scheduleBlock() {
+    return h("div",{style:S.card},
+      h("div",{onClick:()=>setShowSched(!showSched),style:{display:"flex",justifyContent:"space-between",cursor:"pointer"}},
+        h("div",{style:Object.assign({},S.label,{marginBottom:0})},"Schedule · "+doneCount+"/"+project.phases.length+" phases done"),
+        h("span",{style:{fontFamily:MONO,fontSize:11,color:C.mut}},showSched?"▴":"▾")),
+      showSched&&h("div",{style:{marginTop:10}}, ...phaseStates.map(({p,st})=>h("div",{key:p.id,style:{display:"flex",gap:10,alignItems:"baseline",padding:"6px 0",borderTop:`1px solid ${C.hair}`}},
+        h("span",{style:{width:8,height:8,borderRadius:4,background:p.color,flexShrink:0,display:"inline-block"}}),
+        h("div",{style:{flex:1}},
+          h("div",{style:{fontSize:13,color:C.ink}},p.label),
+          h("div",{style:{fontFamily:MONO,fontSize:10,color:C.mut}},shortDate(p.start)+" – "+shortDate(p.end)+(st.note?" · "+st.note:""))),
+        h("span",{style:S.chip(st.color)},st.label))))
+    );
+  }
+
+  function prepPanel() {
+    if (!prepHolds.length) return null;
+    return h("div",{style:Object.assign({},S.card,{borderColor:C.crit})},
+      h("div",{style:Object.assign({},S.label,{color:C.crit})},"Inspection prep"),
+      ...prepHolds.map((e,i)=>{
+        const items=(INSPECTION_CHECKLISTS[pid]||{})[e.date]||[]; const open=expandedHold===e.date;
+        const cnt=items.filter((it,ix)=>checks[pid]&&checks[pid][e.date+"::"+ix]).length;
+        return h("div",{key:i,style:{marginBottom:open?10:6}},
+          h("div",{onClick:()=>setExpandedHold(open?null:e.date),style:{display:"flex",justifyContent:"space-between",gap:10,cursor:"pointer"}},
+            h("div",{style:{fontSize:12.5,fontWeight:700,color:C.ink}},h("span",{style:{fontFamily:MONO,color:C.mut,marginRight:8}},shortDate(e.date)),cleanLabel(e.label)),
+            h("span",{style:{fontFamily:MONO,fontSize:10,color:cnt===items.length?C.qc:C.mut}},cnt+"/"+items.length+(open?" ▴":" ▾"))),
+          open&&h("div",{style:{marginTop:6}}, ...items.map((it,ix)=>{ const ck=!!(checks[pid]&&checks[pid][e.date+"::"+ix]);
+            return h("div",{key:ix,onClick:()=>toggleCheck(e.date+"::"+ix,!ck),style:{display:"flex",gap:9,padding:"5px 0",cursor:"pointer"}},Box(ck,null),h("span",{style:{fontSize:12.5,color:ck?C.mut:C.ink,textDecoration:ck?"line-through":"none",lineHeight:1.4}},it)); }))
+        );
+      })
+    );
+  }
+
+  function closeoutCard() {
+    const missingDetail = specs.filter(s=>s.status==="Selected"&&!hasDetail(s));
+    const notApproved = specs.filter(s=>s.status==="Selected"&&!s.ownerApproved);
+    const openPh = phaseStates.filter(x=>x.st.key!=="done");
+    const finalHold = project.holds[project.holds.length-1];
+    const finalRec = finalHold ? ((progress[pid]||{})["event::"+finalHold.date+"::"+finalHold.label]) : null;
+    const rows = [
+      [tbdSpecs.length===0, tbdSpecs.length?tbdSpecs.length+" selections still TBD":"All selections made"],
+      [missingDetail.length===0, missingDetail.length?missingDetail.length+" specs missing product details":"All specs have product details"],
+      [notApproved.length===0, notApproved.length?notApproved.length+" specs not marked owner-approved":"All specs owner-approved"],
+      [openClars.length===0, openClars.length?openClars.length+" open clarifications":"No open clarifications"],
+      [proposedCOs.length===0, proposedCOs.length?proposedCOs.length+" change orders still Proposed":"No unresolved change orders"],
+      [openPh.length===0, openPh.length?openPh.length+" phases not marked done":"All phases done"],
+      [!!(finalRec&&finalRec.status==="Passed"), finalHold?(finalRec&&finalRec.status==="Passed"?cleanLabel(finalHold.label)+" passed":cleanLabel(finalHold.label)+" not recorded as passed"):"No final inspection on schedule"],
+    ];
+    return h("div",{style:Object.assign({},S.card,{borderColor:C.qc})},
+      h("div",{style:Object.assign({},S.label,{color:C.qc})},"Closeout — owner spec package"),
+      ...rows.map((r,i)=>h("div",{key:i,style:{display:"flex",gap:9,fontSize:13,padding:"4px 0",color:r[0]?C.ink:C.warn}},h("span",{style:{width:16,flexShrink:0}},r[0]?"✓":"⚠"),r[1])),
+      h("button",{onClick:()=>setShowPkg(true),style:Object.assign({},S.btn(C.accent),{width:"100%",marginTop:12})},"Preview + print spec package")
+    );
+  }
+
+  // ── TODAY TAB ──
+  const todayTab = h("div",null,
+    pStatus!=="Closeout"&&h("div",{style:{display:"flex",gap:8,flexWrap:"wrap",marginBottom:12}},
+      ...phaseStates.filter(x=>x.p.start<=todayStr&&x.st.key!=="done"&&(x.p.end>=todayStr||x.st.recorded||x.st.key==="unconfirmed")).map(({p,st})=>h("div",{key:p.id,style:{background:p.color+"22",border:`1px solid ${p.color}`,borderRadius:20,padding:"4px 12px",fontSize:11,fontWeight:700,color:p.color,fontFamily:MONO}},p.trade+(st.key==="behind"?" · BEHIND":""))),
+      phaseStates.every(x=>x.p.start>todayStr)&&h("div",{style:{fontSize:12,color:C.mut,fontFamily:MONO}},"Project starts "+fmtLong(project.startDate))
     ),
-    taskNote&&h("div",{style:{fontFamily:"'Space Mono',monospace",fontSize:11,color:C.qc,marginBottom:10}},taskNote),
-    (openTasks.length===0&&doneTasks.length===0)&&h("div",{style:{textAlign:"center",padding:"40px 0",color:C.mut,fontFamily:"'Space Mono',monospace",fontSize:12,lineHeight:1.7}},"No tasks yet \u2014 add one above, or submit a briefing and promote its action items."),
-    ...openTasks.map(t=>taskRow(t)),
-    doneTasks.length>0&&h("div",{style:{fontFamily:"'Space Mono',monospace",fontSize:10,fontWeight:700,color:C.mut,letterSpacing:"0.1em",margin:"16px 0 6px"}},"DONE ("+doneTasks.length+")"),
-    ...doneTasks.map(t=>taskRow(t))
+    ...todayEvents.map((e,i)=>h("div",{key:"te"+i,style:{background:e.color+"18",border:`1px solid ${e.color}`,borderRadius:8,padding:"8px 14px",fontSize:12,color:e.color==="#101417"?C.ink:e.color,fontWeight:700,marginBottom:8,fontFamily:MONO}},"TODAY · "+e.label)),
+    (dlOverdue.length>0||dlSoon.length>0)&&h("div",{onClick:()=>{setTab("specs");setSpecView("specs");setSpecFilter("tbd");},style:{background:dlOverdue.length?"#E6394618":"#FFD60A18",border:`1px solid ${dlOverdue.length?C.crit:C.warn}`,borderRadius:8,padding:"9px 14px",fontSize:12,fontWeight:700,color:dlOverdue.length?C.crit:C.warn,marginBottom:8,cursor:"pointer",fontFamily:MONO}},
+      "⚠ "+[dlOverdue.length?dlOverdue.length+" selection"+(dlOverdue.length>1?"s":"")+" overdue":"", dlSoon.length?dlSoon.length+" due within 7 days":""].filter(Boolean).join(" · ")+" — tap to review"),
+    (pStatus!=="Closeout"&&behind.length>0)&&h("div",{onClick:()=>setShowSched(true),style:{background:"#E6394618",border:`1px solid ${C.crit}`,borderRadius:8,padding:"9px 14px",fontSize:12,fontWeight:700,color:C.crit,marginBottom:12,fontFamily:MONO,cursor:"pointer"}},
+      "⚠ "+behind.map(x=>x.p.label.split(/[—:,]/)[0].trim()+(x.st.key==="behind"?" behind":" past end date — needs update")).join(" · ")),
+    pStatus==="Closeout"&&closeoutCard(),
+    checkinCard(),
+    upcoming.length>0&&h("div",{style:S.card},
+      h("div",{style:S.label},"Next 7 days"),
+      ...upcoming.map((e,i)=>h("div",{key:i,style:{display:"flex",gap:10,fontSize:12,marginBottom:5,alignItems:"baseline"}},
+        h("span",{style:{fontFamily:MONO,color:C.mut,minWidth:48,flexShrink:0}},shortDate(e.date)),
+        h("span",{style:{color:e.color==="#101417"?C.ink:e.color,fontWeight:700,lineHeight:1.35}},e.label)))),
+    prepPanel(),
+    tasksBlock(),
+    scheduleBlock(),
+    h("div",{style:S.card},
+      h("div",{style:S.label},"AI briefing (optional)"),
+      !(brief&&brief.briefing)&&h("button",{onClick:getBriefing,disabled:brBusy||!apiKey,style:Object.assign({},S.btn(apiKey?C.accent:C.panel),{width:"100%",opacity:brBusy?0.5:1,color:apiKey?"#fff":C.mut})},brBusy?"Thinking…":apiKey?"Get today's briefing":"Add API key in Settings"),
+      (brief&&brief.briefing)&&h("div",null,
+        h("div",{style:{fontSize:13,color:C.ink,lineHeight:1.65,whiteSpace:"pre-wrap"}},brief.briefing.replace(/^## /gm,"")),
+        h("div",{style:{display:"flex",gap:8,marginTop:10}},
+          parseNumberedList(brief.briefing,"## TODAY'S TASKS").length>0&&h("button",{onClick:promoteBriefing,style:Object.assign({},S.ghost,{color:C.blue,borderColor:C.blue})},"Add tasks to list"),
+          h("button",{onClick:getBriefing,disabled:brBusy,style:S.ghost},brBusy?"…":"Regenerate")))
+    )
   );
 
-
-  // ── SETTINGS PANEL ────────────────────────────────────────────────────────
-  const settingsPanel = h("div",{style:{marginTop:16,paddingTop:14,borderTop:`1px solid ${C.hair}`}},
-    apiKey
-      ?h("div",{style:{display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,marginBottom:10}},h("div",{style:{fontFamily:"'Space Mono',monospace",fontSize:11,color:C.qc,display:"flex",alignItems:"center",gap:6}},"● API key saved (••••"+apiKey.slice(-4)+")"),h("button",{onClick:handleClearKey,style:{background:"none",border:`1px solid ${C.hair}`,borderRadius:6,color:C.mut,fontSize:10,padding:"4px 10px",cursor:"pointer",fontFamily:"'Space Mono',monospace"}},"Change key"))
-      :h("div",{style:{marginBottom:14}},h("div",{style:{fontFamily:"'Space Mono',monospace",fontSize:10,color:C.mut,letterSpacing:"0.05em",marginBottom:6}},"CLAUDE API KEY — stored only in this browser"),h("div",{style:{display:"flex",gap:8}},h("input",{type:"password",value:keyDraft,onChange:e=>setKeyDraft(e.target.value),onKeyDown:e=>{if(e.key==="Enter")handleSaveKey();},placeholder:"sk-ant-api03-...",style:{flex:1,background:C.panel2,border:`1px solid ${C.hair}`,borderRadius:6,color:C.ink,fontFamily:"'Space Mono',monospace",fontSize:12,padding:"8px 10px",outline:"none",boxSizing:"border-box"}}),h("button",{onClick:handleSaveKey,style:{background:"#1F9E3D",border:"none",borderRadius:6,color:"#fff",fontSize:12,fontWeight:700,padding:"8px 16px",cursor:"pointer",fontFamily:"'Space Mono',monospace",whiteSpace:"nowrap"}},"Save"))),
-    keyMsg&&h("div",{style:{fontFamily:"'Space Mono',monospace",fontSize:11,color:C.qc,marginBottom:10}},keyMsg),
-    syncUrl
-      ?h("div",{style:{display:"flex",alignItems:"center",justifyContent:"space-between",gap:10}},h("div",{style:{fontFamily:"'Space Mono',monospace",fontSize:11,color:C.qc}},"● Synced to Google Sheet"),h("div",{style:{display:"flex",gap:8}},h("button",{onClick:refreshLog,style:{background:"none",border:`1px solid ${C.hair}`,borderRadius:6,color:C.mut,fontSize:10,padding:"4px 10px",cursor:"pointer",fontFamily:"'Space Mono',monospace"}},"Refresh"),h("button",{onClick:handleClearSyncUrl,style:{background:"none",border:`1px solid ${C.hair}`,borderRadius:6,color:C.mut,fontSize:10,padding:"4px 10px",cursor:"pointer",fontFamily:"'Space Mono',monospace"}},"Disconnect")))
-      :h("div",null,
-          h("button",{onClick:()=>setShowSyncSetup(s=>!s),style:{background:"none",border:`1px solid ${C.hair}`,borderRadius:6,color:C.warn,fontSize:11,padding:"6px 12px",cursor:"pointer",fontFamily:"'Space Mono',monospace",marginBottom:showSyncSetup?8:0}},(showSyncSetup?"▾ ":"▸ ")+"Connect cross-device sync (Google Sheet)"),
-          showSyncSetup&&h("div",{style:{marginTop:6}},h("div",{style:{fontFamily:"'Space Mono',monospace",fontSize:10,color:C.mut,marginBottom:6,lineHeight:1.6}},"One Sheet covers ALL projects — paste your Apps Script Web App URL."),h("div",{style:{display:"flex",gap:8}},h("input",{type:"text",value:syncUrlDraft,onChange:e=>setSyncUrlDraft(e.target.value),onKeyDown:e=>{if(e.key==="Enter")handleSaveSyncUrl();},placeholder:"https://script.google.com/macros/s/.../exec",style:{flex:1,background:C.panel2,border:`1px solid ${C.hair}`,borderRadius:6,color:C.ink,fontFamily:"'Space Mono',monospace",fontSize:12,padding:"8px 10px",outline:"none",boxSizing:"border-box"}}),h("button",{onClick:handleSaveSyncUrl,style:{background:"#0066FF",border:"none",borderRadius:6,color:"#fff",fontSize:12,fontWeight:700,padding:"8px 16px",cursor:"pointer",fontFamily:"'Space Mono',monospace",whiteSpace:"nowrap"}},"Connect")))
-        ),
-    syncMsg&&h("div",{style:{fontFamily:"'Space Mono',monospace",fontSize:11,color:C.qc,marginTop:8}},syncMsg),
-    (apiKey&&syncUrl)&&h("button",{onClick:()=>setSettingsOpen(false),style:{marginTop:10,background:"none",border:`1px solid ${C.hair}`,borderRadius:6,color:C.mut,fontSize:10,padding:"4px 12px",cursor:"pointer",fontFamily:"'Space Mono',monospace"}},"\u25B4 Hide settings")
+  // ── SPECS TAB ──
+  function specEditor(isNew) {
+    const d = draft || {};
+    const setD = patch => setDraft(Object.assign({},d,patch));
+    const rooms = Array.from(new Set(specs.map(s=>s.room)));
+    return h("div",{style:Object.assign({},S.card,{borderColor:C.blue})},
+      h("div",{style:S.label},isNew?"New spec":"Edit spec"),
+      isNew&&h("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:8}},
+        h("input",{type:"text",value:d.category||"",onChange:e=>setD({category:e.target.value}),placeholder:"Category (e.g. Lighting)",style:S.input}),
+        h("input",{type:"text",value:d.item||"",onChange:e=>setD({item:e.target.value}),placeholder:"Item (e.g. Pendants)",style:S.input})),
+      h("input",{type:"text",list:"roomlist",value:d.room||"",onChange:e=>setD({room:e.target.value}),placeholder:"Room / location",style:Object.assign({},S.input,{marginBottom:8})}),
+      h("datalist",{id:"roomlist"},rooms.map(r=>h("option",{key:r,value:r}))),
+      ...SPEC_FIELDS.map(([k,lab])=>h("div",{key:k,style:{marginBottom:8}},
+        h("div",{style:{fontFamily:MONO,fontSize:9.5,color:C.mut,marginBottom:3}},lab),
+        k==="notes"?h("textarea",{value:d[k]||"",onChange:e=>setD({[k]:e.target.value}),style:Object.assign({},S.input,{minHeight:56,resize:"vertical"})})
+          :h("input",{type:"text",value:d[k]||"",onChange:e=>setD({[k]:e.target.value}),style:S.input}))),
+      h("div",{style:{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap",marginBottom:10}},
+        h("select",{value:d.status||"Selected",onChange:e=>setD({status:e.target.value,statusTouched:true}),style:Object.assign({},S.input,{width:"auto",fontSize:14})},["TBD","Selected","N/A"].map(s=>h("option",{key:s,value:s},s))),
+        h("label",{style:{display:"flex",gap:7,alignItems:"center",fontSize:13,color:C.ink,cursor:"pointer"}},
+          h("input",{type:"checkbox",checked:!!d.ownerApproved,onChange:e=>setD({ownerApproved:e.target.checked,approvedDate:e.target.checked?(d.approvedDate||todayStr):""})}),
+          "Owner approved"+(d.ownerApproved&&d.approvedDate?" ("+shortDate(d.approvedDate)+")":""))),
+      h("div",{style:{display:"flex",gap:8,flexWrap:"wrap"}},
+        h("button",{onClick:()=>{
+          if (isNew) { if(!(d.category||"").trim()||!(d.item||"").trim()) { note("Category and item are required"); return; }
+            const key=(d.category.trim()+"::"+d.item.trim()); if (specs.find(s=>s.key===key)) { note("That spec already exists"); return; }
+            const dn = Object.assign({}, d); delete dn.statusTouched;
+            saveSpec(key, Object.assign({}, dn, {category:d.category.trim(), item:d.item.trim(), room:(d.room||"Whole Home").trim()||"Whole Home", custom:true, source:"edit"})); setAdding(false); }
+          else { const d2 = Object.assign({}, d, {source:"edit"}); if (!d2.statusTouched && d2.status==="TBD" && hasDetail(d2)) d2.status="Selected"; delete d2.statusTouched; saveSpec(editKey, d2); setEditKey(null); }
+          setDraft(null); note("✓ Spec saved");
+        },style:S.btn(C.blue)},"Save"),
+        !isNew&&d.custom&&h("button",{onClick:()=>{ if(window.confirm("Delete this spec?")){ deleteSpec(editKey); setEditKey(null); setDraft(null);} },style:Object.assign({},S.ghost,{color:C.crit,borderColor:C.crit,padding:"9px 12px"})},"Delete"),
+        !isNew&&!d.custom&&h("button",{onClick:()=>{ if(window.confirm("Reset to the original contract wording?")){ resetSpec(editKey); setEditKey(null); setDraft(null);} },style:Object.assign({},S.ghost,{color:C.warn,borderColor:C.warn,padding:"9px 12px"})},"Reset to contract"),
+        h("button",{onClick:()=>{setEditKey(null);setAdding(false);setDraft(null);},style:Object.assign({},S.ghost,{padding:"9px 12px"})},"Cancel")),
+      (!isNew&&d.contractText)&&h("div",{style:{fontFamily:MONO,fontSize:10,color:C.mut,marginTop:10,lineHeight:1.5}},"Contract: "+d.contractText)
+    );
+  }
+  function specRow(s) {
+    if (editKey===s.key) return h("div",{key:s.key},specEditor(false));
+    const tbd = s.status==="TBD", na = s.status==="N/A";
+    return h("div",{key:s.key,onClick:()=>{setEditKey(s.key);setAdding(false);setDraft(Object.assign({},s));},style:{padding:"9px 0",borderTop:`1px solid ${C.hair}`,cursor:"pointer"}},
+      h("div",{style:{display:"flex",justifyContent:"space-between",gap:8,alignItems:"baseline"}},
+        h("div",{style:{fontSize:13.5,fontWeight:700,color:na?C.mut:C.ink}},h("span",{style:{display:"inline-block",width:8,height:8,borderRadius:2,background:catColor(s.category),marginRight:7}}),s.item),
+        h("div",{style:{flexShrink:0}},
+          tbd&&h("span",{style:S.chip(C.warn)},"TBD"),
+          na&&h("span",{style:S.chip(C.mut)},"N/A"),
+          s.ownerApproved&&h("span",{style:S.chip(C.qc)},"✓ Owner"),
+          (tbd&&s.deadline)&&h("span",{style:S.chip(s.deadline<todayStr?C.crit:C.mut)},"by "+shortDate(s.deadline)))),
+      h("div",{style:{fontFamily:MONO,fontSize:9.5,color:C.mut,margin:"2px 0 0 15px"}},s.category),
+      h("div",{style:{fontSize:12.5,color:tbd?C.warn:C.ink,margin:"3px 0 0 15px",lineHeight:1.45}},tbd?(s.notes||"TBD"):specSummary(s)),
+      (!tbd&&hasDetail(s)&&s.notes&&s.notes!==s.contractText)&&h("div",{style:{fontSize:11.5,color:C.mut,margin:"2px 0 0 15px",lineHeight:1.4}},s.notes)
+    );
+  }
+  const shownSpecs = specs.filter(s=>specFilter==="all"?true:specFilter==="tbd"?s.status==="TBD":specFilter==="approve"?(s.status==="Selected"&&!s.ownerApproved):true);
+  const roomsOrder = Array.from(new Set(shownSpecs.map(s=>s.room)));
+  const scope = (PROJECT_INTEL[pid]&&PROJECT_INTEL[pid].scopeNotes)||[];
+  const specsTab = h("div",null,
+    Seg([["specs","Specs"],["scope","Scope"]],specView,setSpecView),
+    specView==="specs"&&h("div",null,
+      h("div",{style:{display:"flex",gap:8,marginBottom:12}},
+        h("button",{onClick:()=>{setAdding(true);setEditKey(null);setDraft({status:"Selected",room:""});},style:Object.assign({},S.btn(C.accent),{flex:1})},"+ Add spec"),
+        h("button",{onClick:()=>setShowPkg(true),style:Object.assign({},S.btn(C.panel2,C.ink),{flex:1,border:`1px solid ${C.hair}`})},"Print package")),
+      h("div",{style:{display:"flex",gap:6,marginBottom:12,flexWrap:"wrap"}},
+        [["all","All ("+specs.length+")"],["tbd","TBD ("+tbdSpecs.length+")"],["approve","Needs owner OK ("+specs.filter(s=>s.status==="Selected"&&!s.ownerApproved).length+")"]].map(([id,lab])=>
+          h("button",{key:id,onClick:()=>setSpecFilter(id),style:{padding:"6px 11px",borderRadius:14,fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:MONO,background:specFilter===id?C.ink:"transparent",color:specFilter===id?C.bg:C.mut,border:`1px solid ${specFilter===id?C.ink:C.hair}`}},lab))),
+      adding&&specEditor(true),
+      shownSpecs.length===0&&h("div",{style:{textAlign:"center",padding:"30px 0",color:C.mut,fontFamily:MONO,fontSize:12}},"Nothing here."),
+      ...roomsOrder.map(r=>h("div",{key:r,style:S.card},
+        h("div",{style:Object.assign({},S.label,{marginBottom:2})},r),
+        ...shownSpecs.filter(s=>s.room===r).map(specRow)))
+    ),
+    specView==="scope"&&h("div",null, scope.length===0&&h("div",{style:{color:C.mut,fontFamily:MONO,fontSize:12}},"No scope notes."),
+      ...scope.map((s,i)=>h("div",{key:i,style:S.card},
+        h("div",{style:Object.assign({},S.label,{color:C.blue})},s.area),
+        h("div",{style:{fontSize:13,color:C.ink,lineHeight:1.6}},s.note))),
+      (project.openItems||[]).length>0&&h("div",{style:S.card},h("div",{style:S.label},"Open items from contract review"),
+        ...project.openItems.map((o,i)=>h("div",{key:i,style:{fontSize:12.5,color:C.ink,lineHeight:1.5,padding:"3px 0"}},"• "+o))))
   );
-  const settingsSlim = h("div",{style:{marginTop:12,paddingTop:10,borderTop:`1px solid ${C.hair}`,display:"flex",justifyContent:"space-between",alignItems:"center"}},
-    h("div",{style:{fontFamily:"'Space Mono',monospace",fontSize:11,color:C.mut}},
-      h("span",{style:{color:apiKey?C.qc:C.crit}},"\u25CF "),"Key",
-      h("span",{style:{color:syncUrl?C.qc:C.warn,marginLeft:10}},"\u25CF "),"Sync"
+
+  // ── CHANGES TAB ──
+  const approvedTotal = projCOs.filter(c=>c.status!=="Proposed").reduce((a,c)=>a+(parseFloat(c.amount)||0),0);
+  const changesTab = h("div",null,
+    Seg([["cos","Change orders ("+projCOs.length+")"],["clar","Clarifications ("+projClars.length+")"]],chgView,setChgView),
+    chgView==="cos"&&h("div",null,
+      h("div",{style:S.card},
+        h("div",{style:S.label},"New change order"),
+        h("input",{type:"text",value:coTitle,onChange:e=>setCoTitle(e.target.value),placeholder:"Description (e.g. Add 2 can lights — hallway)",style:Object.assign({},S.input,{marginBottom:8})}),
+        h("div",{style:{display:"flex",gap:8}},
+          h("input",{type:"number",inputMode:"decimal",value:coAmount,onChange:e=>setCoAmount(e.target.value),placeholder:"Amount $",style:Object.assign({},S.input,{flex:1,minWidth:0})}),
+          h("select",{value:coStatus,onChange:e=>setCoStatus(e.target.value),style:Object.assign({},S.input,{flex:1,minWidth:0,fontSize:14})},["Proposed","Approved","Invoiced","Paid"].map(s=>h("option",{key:s,value:s},s))),
+          h("button",{onClick:addCO,disabled:!coTitle.trim()||coAmount==="",style:Object.assign({},S.btn(C.blue),{opacity:(coTitle.trim()&&coAmount!=="")?1:0.4})},"Add"))),
+      projCOs.length===0&&h("div",{style:{textAlign:"center",padding:"24px 0",color:C.mut,fontFamily:MONO,fontSize:12}},"No change orders logged."),
+      ...projCOs.map(co=>h("div",{key:co.id,style:S.card},
+        h("div",{style:{display:"flex",justifyContent:"space-between",gap:10}},
+          h("div",{style:{fontSize:13.5,fontWeight:700,color:C.ink,flex:1}},co.title),
+          h("div",{style:{fontFamily:MONO,fontSize:13,fontWeight:700,color:C.ink}},fmtMoney(co.amount))),
+        h("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginTop:7}},
+          h("select",{value:co.status,onChange:e=>setCOStatus(co,e.target.value),style:{background:C.bg,border:`1px solid ${coStatusColor(co.status)}`,borderRadius:6,color:coStatusColor(co.status),fontSize:11,fontWeight:700,padding:"4px 8px",fontFamily:MONO}},["Proposed","Approved","Invoiced","Paid"].map(s=>h("option",{key:s,value:s},s))),
+          h("span",{style:{fontFamily:MONO,fontSize:9.5,color:C.mut}},co.date),
+          h("button",{onClick:()=>removeCO(co),style:{background:"none",border:"none",color:C.mut,fontSize:16,cursor:"pointer"}},"×")))),
+      projCOs.length>0&&h("div",{style:S.card},
+        h("div",{style:S.label},"Totals"),
+        ...["Proposed","Approved","Invoiced","Paid"].map(st=>{ const t=projCOs.filter(c=>c.status===st).reduce((a,c)=>a+(parseFloat(c.amount)||0),0); return t?h("div",{key:st,style:{display:"flex",justifyContent:"space-between",fontSize:12.5,marginBottom:4}},h("span",{style:{color:coStatusColor(st),fontFamily:MONO}},st),h("span",{style:{fontFamily:MONO,color:C.ink}},fmtMoney(t))):null; }),
+        project.contractBase?h("div",{style:{display:"flex",justifyContent:"space-between",fontSize:12.5,marginTop:6,paddingTop:6,borderTop:`1px solid ${C.hair}`}},h("span",{style:{color:C.mut}},"Contract + approved COs"),h("span",{style:{fontFamily:MONO,color:C.qc,fontWeight:700}},fmtMoney(project.contractBase+approvedTotal)))
+          :h("div",{style:{fontFamily:MONO,fontSize:10,color:C.mut,marginTop:6}},"Contract base not on file — totals are CO amounts only"))
     ),
-    h("button",{onClick:()=>setSettingsOpen(true),style:{background:"none",border:`1px solid ${C.hair}`,borderRadius:6,color:C.mut,fontSize:10,padding:"4px 12px",cursor:"pointer",fontFamily:"'Space Mono',monospace"}},"\u2699 Settings")
+    chgView==="clar"&&h("div",null,
+      h("div",{style:S.card},
+        h("div",{style:S.label},"New clarification"),
+        h("textarea",{value:clQ,onChange:e=>setClQ(e.target.value),placeholder:"Question (e.g. Does the laundry get reface or refinish?)",style:Object.assign({},S.input,{minHeight:52,resize:"vertical",marginBottom:8})}),
+        h("textarea",{value:clA,onChange:e=>setClA(e.target.value),placeholder:"Answer / decision (leave blank if still open)",style:Object.assign({},S.input,{minHeight:44,resize:"vertical",marginBottom:8})}),
+        h("div",{style:{display:"flex",gap:8}},
+          h("input",{type:"text",value:clBy,onChange:e=>setClBy(e.target.value),placeholder:"Decided by (owner, designer, sub…)",style:S.input}),
+          h("button",{onClick:addClar,disabled:!clQ.trim(),style:Object.assign({},S.btn(C.blue),{opacity:clQ.trim()?1:0.4})},"Add"))),
+      projClars.length===0&&h("div",{style:{textAlign:"center",padding:"24px 0",color:C.mut,fontFamily:MONO,fontSize:12}},"No clarifications logged."),
+      ...projClars.map(c=>h("div",{key:c.id,style:Object.assign({},S.card,{borderColor:c.status==="Resolved"?C.hair:C.warn})},
+        h("div",{style:{display:"flex",justifyContent:"space-between",gap:8}},
+          h("div",{style:{fontSize:13.5,fontWeight:700,color:C.ink,lineHeight:1.45,flex:1}},c.question),
+          h("button",{onClick:()=>removeClar(c),style:{background:"none",border:"none",color:C.mut,fontSize:16,cursor:"pointer"}},"×")),
+        c.status==="Resolved"
+          ? h("div",{style:{fontSize:13,color:C.qc,marginTop:6,lineHeight:1.5}},c.answer,h("div",{style:{fontFamily:MONO,fontSize:9.5,color:C.mut,marginTop:3}},"Resolved "+(c.resolvedDate||c.date)+(c.decidedBy?" · "+c.decidedBy:"")))
+          : resolving===c.id
+            ? h("div",{style:{marginTop:8}},
+                h("textarea",{value:resA,onChange:e=>setResA(e.target.value),placeholder:"Answer / decision",style:Object.assign({},S.input,{minHeight:48,marginBottom:8})}),
+                h("div",{style:{display:"flex",gap:8}},h("input",{type:"text",value:resBy,onChange:e=>setResBy(e.target.value),placeholder:"Decided by",style:S.input}),h("button",{onClick:()=>resolveClar(c),style:S.btn(C.qc,"#0B0E11")},"Save")))
+            : h("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginTop:6}},
+                h("span",{style:{fontFamily:MONO,fontSize:10,color:C.warn}},"OPEN · since "+c.date),
+                h("button",{onClick:()=>{setResolving(c.id);setResA("");setResBy(c.decidedBy||"");},style:S.ghost},"Resolve"))
+      ))
+    )
   );
 
-  // ── ROOT ──────────────────────────────────────────────────────────────────
-  const tabs = [["today","Today"],["tasks","Tasks"],["intel","Intel"],["log","Log"]];
-  return h("div",{style:{background:C.bg,minHeight:"100vh",fontFamily:"'Archivo',sans-serif",color:C.ink}},
-    h("div",{style:{background:C.panel,borderBottom:`1px solid ${C.hair}`,padding:"16px 20px"}},
-      h("div",{style:{maxWidth:680,margin:"0 auto"}},
-        h("div",{style:{fontFamily:"'Space Mono',monospace",fontSize:10,color:C.mut,letterSpacing:"0.2em",textTransform:"uppercase",marginBottom:8}},"Advanced Remodel & Design · Daily Field Dashboard"),
-        h("select",{value:activeProjectId,onChange:e=>switchProject(e.target.value),style:{width:"100%",background:C.panel2,border:`1px solid ${C.hair}`,borderRadius:8,color:C.ink,fontFamily:"'Archivo',sans-serif",fontSize:15,fontWeight:800,padding:"10px 12px",outline:"none",cursor:"pointer",appearance:"none",WebkitAppearance:"none",marginBottom:6}},PROJECTS.map(p=>h("option",{key:p.id,value:p.id},p.name))),
-        h("div",{style:{fontSize:12,color:C.mut,marginTop:2}},project.location+" · Owner: "+project.owner),
-        h("div",{style:{fontSize:12,color:C.mut,marginTop:3}},fmt(today)),
-        h("div",{style:{marginTop:14}},
-          h("div",{style:{display:"flex",justifyContent:"space-between",fontFamily:"'Space Mono',monospace",fontSize:10,color:C.mut,marginBottom:5}},h("span",null,toDate(project.startDate).toLocaleDateString("en-US",{month:"short",day:"numeric"})),h("span",{style:{color:pct>=100?C.qc:C.ink,fontWeight:700}},pct+"% complete"),h("span",null,toDate(project.endDate).toLocaleDateString("en-US",{month:"short",day:"numeric"}))),
-          h("div",{style:{background:C.hair,borderRadius:4,height:6,overflow:"hidden"}},h("div",{style:{width:Math.min(100,pct)+"%",height:"100%",background:pct>=100?C.qc:"#1F9E3D",borderRadius:4,transition:"width 0.6s ease"}})),
-          h("div",{style:{fontFamily:"'Space Mono',monospace",fontSize:10,color:C.mut,marginTop:5,textAlign:"right"}},daysLeft>0?daysLeft+" days remaining":"Target date reached")
-        ),
-        settingsOpen?settingsPanel:settingsSlim
-      )
-    ),
-    h("div",{style:{background:C.panel,borderBottom:`1px solid ${C.hair}`}},
-      h("div",{style:{maxWidth:680,margin:"0 auto",display:"flex",overflowX:"auto"}},
-        tabs.map(([id,label])=>h("button",{key:id,onClick:()=>setTab(id),style:{padding:"11px 14px",background:"none",border:"none",cursor:"pointer",fontFamily:"'Space Mono',monospace",fontSize:11,fontWeight:700,color:tab===id?C.ink:C.mut,borderBottom:tab===id?"2px solid #1F9E3D":"2px solid transparent",whiteSpace:"nowrap"}},
-          label,
-          id==="log"&&log.length>0&&h("span",{style:{marginLeft:7,background:"#1F9E3D",color:"#fff",borderRadius:10,padding:"1px 7px",fontSize:10}},log.length),
-          id==="intel"&&tbdCount>0&&h("span",{style:{marginLeft:7,background:"#FFD60A",color:"#101417",borderRadius:10,padding:"1px 7px",fontSize:10,fontWeight:700}},tbdCount),
-          id==="tasks"&&openTasks.length>0&&h("span",{style:{marginLeft:7,background:"#0066FF",color:"#fff",borderRadius:10,padding:"1px 7px",fontSize:10,fontWeight:700}},openTasks.length)
-        ))
-      )
-    ),
-    h("div",{style:{maxWidth:680,margin:"0 auto",padding:"24px 20px"}},tab==="today"?todayTab:tab==="tasks"?tasksTab_:tab==="intel"?intelTab_:logTab_),
-    h("div",{style:{textAlign:"center",padding:"20px",fontFamily:"'Space Mono',monospace",fontSize:10,color:C.mut,borderTop:`1px solid ${C.hair}`,marginTop:20}},"CSLB B/C-33 #1039947 · Osmar@advremodel.com · 760-485-7076 · Schedules tentative — subject to AHJ, selections, long-lead delivery · "+APP_VERSION)
+  // ── NOTES TAB ──
+  const notesTab = h("div",null,
+    h("div",{style:S.card},
+      h("textarea",{value:noteDraft,onChange:e=>setNoteDraft(e.target.value),placeholder:"Sub conversations, field conditions, owner decisions, measurements…",style:Object.assign({},S.input,{minHeight:74,resize:"vertical"})}),
+      h("button",{onClick:()=>{addNote(noteDraft);setNoteDraft("");},disabled:!noteDraft.trim(),style:Object.assign({},S.btn(C.accent),{width:"100%",marginTop:8,opacity:noteDraft.trim()?1:0.4})},"Add note")),
+    projNotes.length===0&&h("div",{style:{textAlign:"center",padding:"24px 0",color:C.mut,fontFamily:MONO,fontSize:12}},"No notes yet."),
+    ...projNotes.map(n=>h("div",{key:n.id,style:S.card},
+      h("div",{style:{display:"flex",justifyContent:"space-between",marginBottom:5}},
+        h("span",{style:{fontFamily:MONO,fontSize:10,fontWeight:700,color:C.accent}},shortDate(n.date)+(n.source==="check-in"?" · CHECK-IN":n.source==="log"?" · DAILY LOG":"")),
+        h("button",{onClick:()=>removeNote(n),style:{background:"none",border:"none",color:C.mut,fontSize:16,cursor:"pointer"}},"×")),
+      h("div",{style:{fontSize:13.5,color:C.ink,lineHeight:1.55,whiteSpace:"pre-wrap"}},n.text)))
+  );
+
+  // ── ASK TAB ──
+  const askTab = h("div",null,
+    h("div",{style:Object.assign({},S.card,{fontSize:12.5,color:C.mut,lineHeight:1.5})},
+      "Ask about specs, schedule, notes, changes, decisions. E.g. ",h("em",null,"“What grout did we pick for the casita?”")," · ",h("em",null,"“What did the plumber say about the drain?”"),
+      chat.length>0&&h("button",{onClick:()=>setChat([]),style:Object.assign({},S.ghost,{display:"block",marginTop:8})},"Clear chat")),
+    chat.length===0&&h("div",{style:{textAlign:"center",padding:"24px 0",color:C.mut,fontFamily:MONO,fontSize:11}},"No questions yet."),
+    ...chat.map((m,i)=>h("div",{key:i,style:{display:"flex",justifyContent:m.role==="user"?"flex-end":"flex-start",marginBottom:10}},
+      h("div",{style:{maxWidth:"86%",background:m.role==="user"?C.blue:m.role==="error"?"#E6394618":C.panel2,border:`1px solid ${m.role==="user"?C.blue:m.role==="error"?C.crit:C.hair}`,borderRadius:m.role==="user"?"12px 12px 2px 12px":"12px 12px 12px 2px",padding:"10px 13px",fontSize:13.5,color:m.role==="error"?C.crit:C.ink,lineHeight:1.5,whiteSpace:"pre-wrap"}},m.text))),
+    askBusy&&h("div",{style:{fontFamily:MONO,fontSize:12,color:C.mut,marginBottom:10}},h("span",{className:"spin"},"↻")," Thinking…"),
+    h("div",{ref:chatEnd}),
+    h("div",{style:{display:"flex",gap:8,position:"sticky",bottom:0,background:C.bg,paddingTop:8,paddingBottom:8}},
+      h("input",{type:"text",value:askQ,onChange:e=>setAskQ(e.target.value),onKeyDown:e=>{if(e.key==="Enter")ask();},placeholder:"Ask about this project…",style:S.input}),
+      h("button",{onClick:ask,disabled:askBusy||!askQ.trim(),style:Object.assign({},S.btn(C.blue),{fontSize:18,padding:"0 16px",opacity:askBusy||!askQ.trim()?0.4:1})},"↑"))
+  );
+
+  // ── OWNER SPEC PACKAGE ──
+  function pkgView() {
+    const issued = fmtLong(todayStr);
+    const selected = specs.filter(s=>s.status==="Selected");
+    const tbd = specs.filter(s=>s.status==="TBD");
+    const rooms = Array.from(new Set(selected.map(s=>s.room)));
+    const paint = specs.filter(s=>s.category==="Paint"&&s.status!=="N/A");
+    const warr = selected.filter(s=>s.warranty);
+    const apprCOs = projCOs.filter(c=>c.status!=="Proposed").slice().sort((a,b)=>a.date<b.date?-1:1);
+    const resolved = projClars.filter(c=>c.status==="Resolved").slice().sort((a,b)=>(a.resolvedDate||a.date)<(b.resolvedDate||b.date)?-1:1);
+    const finalHold = project.holds[project.holds.length-1];
+    const finalRec = finalHold ? (progress[pid]||{})["event::"+finalHold.date+"::"+finalHold.label] : null;
+    const gaps = [tbd.length?tbd.length+" selections TBD":null, selected.filter(s=>!hasDetail(s)).length?selected.filter(s=>!hasDetail(s)).length+" specs without product details":null, selected.filter(s=>!s.ownerApproved).length?selected.filter(s=>!s.ownerApproved).length+" specs not owner-approved":null].filter(Boolean);
+    const head = sec => h("div",{className:"sh"},
+      h("div",null,h("b",null,"ADVANCED REMODEL & DESIGN"),h("br"),"CSLB B/C-33 #1039947"),
+      h("div",{style:{textAlign:"center"}},h("b",null,"OWNER SPECIFICATION PACKAGE"),h("br"),sec),
+      h("div",{style:{textAlign:"right"}},h("b",null,project.name),h("br"),"Owner: "+project.owner,h("br"),"Rev "+pkgRev+" · Issued "+issued));
+    const foot = h("div",{className:"sf"},
+      h("span",null,"Prepared by Advanced Remodel & Design · CSLB B/C-33 #1039947 · 760-485-7076 · Osmar@advremodel.com"),
+      h("span",null,project.location+" · Rev "+pkgRev));
+    const sheet = (sec, body) => h("div",{className:"pkg-page"},
+      h("table",{className:"sheet"},
+        h("thead",null,h("tr",null,h("td",null,head(sec)))),
+        h("tfoot",null,h("tr",null,h("td",null,foot))),
+        h("tbody",null,h("tr",null,h("td",null,body)))));
+    const kv = rows => h("table",{className:"kv"},h("tbody",null,rows.filter(Boolean).map((r,i)=>h("tr",{key:i},h("td",null,r[0]),h("td",null,r[1])))));
+    const specTable = list => h("table",{className:"grid"},
+      h("thead",null,h("tr",null,["Item","Product","Model / SKU","Color · Finish","Size","Supplier","Owner OK"].map(x=>h("th",{key:x},x)))),
+      h("tbody",null,list.map(s=>h("tr",{key:s.key},
+        h("td",null,h("span",{className:"band",style:{background:catColor(s.category)}}),h("b",null,s.item),h("div",{className:"muted"},s.category),s.notes&&hasDetail(s)&&s.notes!==s.contractText?h("div",{className:"muted"},s.notes):null),
+        h("td",null,[s.manufacturer,s.product].filter(Boolean).join(" ")||(hasDetail(s)?"—":(s.notes||"—"))),
+        h("td",null,s.model||"—"),
+        h("td",null,[s.color,s.finish].filter(Boolean).join(" · ")||"—"),
+        h("td",null,s.size||"—"),
+        h("td",null,s.supplier||"—"),
+        h("td",null,s.ownerApproved?h("span",{className:"ok"},"✓ "+shortDate(s.approvedDate)):"—")))));
+    const pages = [];
+    pages.push(sheet("Cover", h("div",null,
+      h("div",{style:{height:"0.6in"}}),
+      h("div",{className:"muted",style:{letterSpacing:".12em",fontWeight:700}},"OWNER SPECIFICATION & CLOSEOUT PACKAGE"),
+      h("h1",null,project.name),
+      h("div",{style:{fontSize:"12pt",marginBottom:"0.4in"}},project.location),
+      kv([["Owner",project.owner],["Contract period",fmtLong(project.startDate)+" – "+fmtLong(project.endDate)],
+        finalHold?["Final inspection",cleanLabel(finalHold.label)+" — "+(finalRec&&finalRec.status==="Passed"?"Passed ("+fmtLong(finalRec.date)+")":"scheduled "+fmtLong(finalHold.date))]:null,
+        ["Prepared by","Advanced Remodel & Design · CSLB B/C-33 #1039947"],["Contact","760-485-7076 · Osmar@advremodel.com"]]),
+      h("h3",{style:{marginTop:"0.35in"}},"Revision"),
+      h("table",{className:"grid"},h("thead",null,h("tr",null,["Rev","Date","Description"].map(x=>h("th",{key:x},x)))),
+        h("tbody",null,h("tr",null,h("td",null,pkgRev),h("td",null,issued),h("td",null,"Issued to owner at project closeout")))),
+      h("h3",null,"Contents"),
+      h("div",{style:{fontSize:"10pt",lineHeight:1.8}},["Project summary","Specifications by room",paint.length?"Paint & finish schedule":null,warr.length?"Warranties & care":null,apprCOs.length?"Change orders":null,resolved.length?"Decisions & clarifications":null,tbd.length?"Open items":null].filter(Boolean).map((t,i)=>h("div",{key:i},(i+1)+". "+t))))));
+    pages.push(sheet("Project summary", h("div",null,
+      h("h2",null,"Project summary"),
+      kv([["Project",project.name],["Address",project.location],["Owner",project.owner],["Contractor","Advanced Remodel & Design — CSLB B/C-33 #1039947"],
+        ["Contract period",fmtLong(project.startDate)+" – "+fmtLong(project.endDate)],
+        project.contractBase?["Contract amount",fmtMoney(project.contractBase)]:null,
+        (project.contractBase&&apprCOs.length)?["Approved change orders",fmtMoney(apprCOs.reduce((a,c)=>a+(parseFloat(c.amount)||0),0))]:null,
+        (project.contractBase&&apprCOs.length)?["Contract + approved COs",fmtMoney(project.contractBase+apprCOs.reduce((a,c)=>a+(parseFloat(c.amount)||0),0))]:null,
+        ["Specifications recorded",selected.length+" selected"+(tbd.length?" · "+tbd.length+" open":"")]]),
+      h("h3",null,"Scope of work"),
+      h("table",{className:"grid"},h("tbody",null,scope.map((s,i)=>h("tr",{key:i},h("td",{style:{width:"28%",fontWeight:700}},s.area),h("td",null,s.note))))))));
+    pages.push(sheet("Specifications by room", h("div",null,
+      h("h2",null,"Specifications by room"),
+      selected.length===0?h("div",{className:"muted"},"No confirmed specifications recorded."):null,
+      ...rooms.map(r=>h("div",{key:r},h("h3",null,r),specTable(selected.filter(s=>s.room===r)))))));
+    if (paint.length) pages.push(sheet("Paint & finish schedule", h("div",null,
+      h("h2",null,"Paint & finish schedule"),
+      h("table",{className:"grid"},h("thead",null,h("tr",null,["Location","Surface","Product","Color","Sheen / finish"].map(x=>h("th",{key:x},x)))),
+        h("tbody",null,paint.map(s=>h("tr",{key:s.key},h("td",null,s.room),h("td",null,h("b",null,s.item)),s.status==="TBD"?h("td",{colSpan:3},h("span",{className:"tbd"},"Selection TBD")):h("td",null,[s.manufacturer,s.product].filter(Boolean).join(" ")||(hasDetail(s)?"—":(s.notes||"—"))),s.status==="TBD"?null:h("td",null,s.color||"—"),s.status==="TBD"?null:h("td",null,s.finish||"—"))))),
+      h("p",{className:"muted",style:{marginTop:10}},"Keep this sheet for touch-ups. Record the batch/lot number from any leftover cans."))));
+    if (warr.length) pages.push(sheet("Warranties & care", h("div",null,
+      h("h2",null,"Warranties & care"),
+      h("table",{className:"grid"},h("thead",null,h("tr",null,["Item","Product","Warranty / care"].map(x=>h("th",{key:x},x)))),
+        h("tbody",null,warr.map(s=>h("tr",{key:s.key},h("td",null,h("b",null,s.item),h("div",{className:"muted"},s.room)),h("td",null,specSummary(s)),h("td",null,s.warranty))))))));
+    if (apprCOs.length) pages.push(sheet("Change orders", h("div",null,
+      h("h2",null,"Change orders"),
+      h("table",{className:"grid"},h("thead",null,h("tr",null,["Date","Description","Status","Amount"].map(x=>h("th",{key:x},x)))),
+        h("tbody",null,apprCOs.map(c=>h("tr",{key:c.id},h("td",null,shortDate(c.date)),h("td",null,c.title),h("td",null,c.status),h("td",{style:{textAlign:"right"}},fmtMoney(c.amount)))),
+          h("tr",null,h("td",null),h("td",null,h("b",null,"Total approved change orders")),h("td",null),h("td",{style:{textAlign:"right"}},h("b",null,fmtMoney(apprCOs.reduce((a,c)=>a+(parseFloat(c.amount)||0),0))))))))));
+    if (resolved.length) pages.push(sheet("Decisions & clarifications", h("div",null,
+      h("h2",null,"Decisions & clarifications"),
+      h("table",{className:"grid"},h("thead",null,h("tr",null,["Date","Question","Decision","Decided by"].map(x=>h("th",{key:x},x)))),
+        h("tbody",null,resolved.map(c=>h("tr",{key:c.id},h("td",null,shortDate(c.resolvedDate||c.date)),h("td",null,c.question),h("td",null,c.answer),h("td",null,c.decidedBy||"—"))))))));
+    if (tbd.length) pages.push(sheet("Open items", h("div",null,
+      h("h2",null,"Open items"),
+      h("p",{className:"muted",style:{marginBottom:8}},"Selections not finalized at time of issue."),
+      h("table",{className:"grid"},h("thead",null,h("tr",null,["Location","Item","Status"].map(x=>h("th",{key:x},x)))),
+        h("tbody",null,tbd.map(s=>h("tr",{key:s.key},h("td",null,s.room),h("td",null,h("b",null,s.item),h("div",{className:"muted"},s.category)),h("td",null,h("span",{className:"tbd"},"Selection TBD"),h("div",{className:"muted"},s.notes)))))))));
+    return h("div",{className:"pkg-overlay"},
+      h("div",{className:"pkg-toolbar"},
+        h("button",{onClick:()=>setShowPkg(false),style:{background:"none",border:"1px solid #2A333C",color:"#EAF0F4"}},"← Back"),
+        h("span",{style:{fontFamily:MONO,fontSize:11,color:"#8B98A4"}},"Rev"),
+        h("input",{type:"text",value:pkgRev,onChange:e=>setPkgRev(e.target.value.slice(0,4)),style:{width:44,background:"#0B0E11",border:"1px solid #2A333C",borderRadius:6,color:"#EAF0F4",fontSize:16,padding:"6px 8px"}}),
+        h("div",{style:{flex:1}}),
+        h("button",{onClick:()=>{ if (window.navigator.standalone) { alert("iPhone home-screen apps can’t print. Open the dashboard link in Safari (not the home-screen icon), open the package, then Print."); return; } window.print(); },style:{background:"#1F9E3D",border:"none",color:"#fff"}},"Print / Save PDF")),
+      gaps.length>0&&h("div",{className:"pkg-gaps"},h("b",null,"Before you hand this over: "),gaps.join(" · ")+". TBD items print on the Open Items page."),
+      h("div",{className:"pkg"},pages));
+  }
+
+  // ── SETTINGS ──
+  const settings = settingsOpen
+    ? h("div",{style:{marginTop:14,paddingTop:12,borderTop:`1px solid ${C.hair}`}},
+        apiKey
+          ? h("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}},h("span",{style:{fontFamily:MONO,fontSize:11,color:C.qc}},"● API key saved (••••"+apiKey.slice(-4)+")"),h("button",{onClick:()=>{setApiKey("");lsSetStr(K.apikey,"");},style:S.ghost},"Change key"))
+          : h("div",{style:{marginBottom:12}},h("div",{style:S.label},"Claude API key — stored only in this browser"),
+              h("div",{style:{display:"flex",gap:8}},h("input",{type:"password",value:keyDraft,onChange:e=>setKeyDraft(e.target.value),placeholder:"sk-ant-api03-...",style:S.input}),
+                h("button",{onClick:()=>{const k=keyDraft.trim(); if(!k) return; setApiKey(k); lsSetStr(K.apikey,k); setKeyDraft(""); note("✓ Key saved");},style:S.btn(C.accent)},"Save"))),
+        syncUrl
+          ? h("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center"}},h("span",{style:{fontFamily:MONO,fontSize:11,color:C.qc}},"● Synced to Google Sheet"),
+              h("div",{style:{display:"flex",gap:8}},h("button",{onClick:()=>{refreshAll();note("Refreshing from Sheet…");},style:S.ghost},"Refresh"),h("button",{onClick:()=>{setSyncUrl("");lsSetStr(K.sync,"");},style:S.ghost},"Disconnect")))
+          : h("div",null,h("div",{style:S.label},"Apps Script Web App URL (cross-device sync)"),
+              h("div",{style:{display:"flex",gap:8}},h("input",{type:"text",value:syncDraft,onChange:e=>setSyncDraft(e.target.value),placeholder:"https://script.google.com/macros/s/.../exec",style:S.input}),
+                h("button",{onClick:()=>{const u=syncDraft.trim(); if(!u) return; setSyncUrl(u); lsSetStr(K.sync,u); setSyncDraft(""); note("✓ Sync connected");},style:S.btn(C.blue)},"Connect"))),
+        h("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginTop:12,gap:8,flexWrap:"wrap"}},
+          h("label",{style:{display:"flex",gap:7,alignItems:"center",fontSize:12,color:C.mut,cursor:"pointer",fontFamily:MONO}},h("input",{type:"checkbox",checked:showArch,onChange:e=>{setShowArch(e.target.checked);lsSet(K.showArch,e.target.checked);}}),"Show archived projects"),
+          (apiKey&&syncUrl)&&h("button",{onClick:()=>setSettingsOpen(false),style:S.ghost},"▴ Hide settings")))
+    : h("div",{style:{marginTop:12,paddingTop:10,borderTop:`1px solid ${C.hair}`,display:"flex",justifyContent:"space-between",alignItems:"center"}},
+        h("div",{style:{fontFamily:MONO,fontSize:11,color:C.mut}},h("span",{style:{color:apiKey?C.qc:C.crit}},"● "),"Key",h("span",{style:{color:syncUrl?C.qc:C.warn,marginLeft:10}},"● "),"Sync"),
+        h("button",{onClick:()=>setSettingsOpen(true),style:S.ghost},"⚙ Settings"));
+
+  // ── ROOT ──
+  const visibleProjects = PROJECTS.filter(p=>showArch||statusOf(p)!=="Archived"||p.id===pid);
+  const tabs = [["today","Today",null],["specs","Specs",tbdSpecs.length?[tbdSpecs.length,C.warn,"#101417"]:null],["changes","Changes",(openClars.length+proposedCOs.length)?[openClars.length+proposedCOs.length,C.blue,"#fff"]:null],["notes","Notes",null],["ask","Ask",null]];
+  const content = tab==="today"?todayTab:tab==="specs"?specsTab:tab==="changes"?changesTab:tab==="notes"?notesTab:askTab;
+  return h("div",null,
+    h("style",null,PKG_CSS),
+    showPkg&&pkgView(),
+    h("div",{className:"shell",style:{background:C.bg,minHeight:"100vh",color:C.ink,display:showPkg?"none":"block"}},
+      h("div",{style:{background:C.panel,borderBottom:`1px solid ${C.hair}`,padding:"16px 20px"}},
+        h("div",{style:{maxWidth:680,margin:"0 auto"}},
+          h("div",{style:{fontFamily:MONO,fontSize:10,color:C.mut,letterSpacing:"0.2em",textTransform:"uppercase",marginBottom:8}},"Advanced Remodel & Design · Field"),
+          h("select",{value:pid,onChange:e=>switchProject(e.target.value),style:{width:"100%",background:C.panel2,border:`1px solid ${C.hair}`,borderRadius:8,color:C.ink,fontSize:16,fontWeight:800,padding:"10px 12px",outline:"none",appearance:"none",WebkitAppearance:"none"}},
+            visibleProjects.map(p=>h("option",{key:p.id,value:p.id},p.name+(statusOf(p)!=="Active"?" · "+statusOf(p):"")))),
+          h("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",gap:8,marginTop:8}},
+            h("div",{style:{fontSize:12,color:C.mut,lineHeight:1.4}},project.location+" · "+project.owner,h("br"),fmt(today)),
+            h("select",{value:pStatus,onChange:e=>setProjectStatus(e.target.value),style:{background:C.bg,border:`1px solid ${pStatus==="Active"?C.accent:pStatus==="Closeout"?C.qc:C.mut}`,borderRadius:14,color:pStatus==="Active"?C.accent:pStatus==="Closeout"?C.qc:C.mut,fontFamily:MONO,fontSize:11,fontWeight:700,padding:"4px 8px"}},["Active","Closeout","Archived"].map(s=>h("option",{key:s,value:s},s)))),
+          h("div",{style:{marginTop:12}},
+            h("div",{style:{display:"flex",justifyContent:"space-between",fontFamily:MONO,fontSize:10,color:C.mut,marginBottom:5}},
+              h("span",null,shortDate(project.startDate)),h("span",{style:{color:C.ink,fontWeight:700}},"Time "+timePct+"% · Work "+doneCount+"/"+project.phases.length+" phases"),h("span",null,shortDate(project.endDate))),
+            h("div",{style:{background:C.hair,borderRadius:4,height:6,overflow:"hidden",position:"relative"}},
+              h("div",{style:{position:"absolute",left:0,top:0,bottom:0,width:timePct+"%",background:"#2E3A44"}}),
+              h("div",{style:{position:"absolute",left:0,top:0,bottom:0,width:Math.round(doneCount/project.phases.length*100)+"%",background:C.accent}})),
+            h("div",{style:{fontFamily:MONO,fontSize:10,color:C.mut,marginTop:5,textAlign:"right"}},daysLeft>0?daysLeft+" days to contract completion":"Past contract completion date")),
+          settings,
+          flash&&h("div",{style:{fontFamily:MONO,fontSize:11,color:C.qc,marginTop:8}},flash))),
+      h("div",{style:{background:C.panel,borderBottom:`1px solid ${C.hair}`,position:"sticky",top:0,zIndex:5}},
+        h("div",{style:{maxWidth:680,margin:"0 auto",display:"flex",overflowX:"auto"}},
+          tabs.map(([id,lab,badge])=>h("button",{key:id,onClick:()=>setTab(id),style:{flex:1,padding:"11px 8px",background:"none",border:"none",cursor:"pointer",fontFamily:MONO,fontSize:11.5,fontWeight:700,color:tab===id?C.ink:C.mut,borderBottom:tab===id?`2px solid ${C.accent}`:"2px solid transparent",whiteSpace:"nowrap"}},
+            lab, badge&&h("span",{style:{marginLeft:5,background:badge[1],color:badge[2],borderRadius:10,padding:"1px 6px",fontSize:9.5}},badge[0]))))),
+      h("div",{style:{maxWidth:680,margin:"0 auto",padding:"18px 16px 40px"}},content),
+      h("div",{style:{textAlign:"center",padding:"18px",fontFamily:MONO,fontSize:10,color:C.mut,borderTop:`1px solid ${C.hair}`}},
+        "CSLB B/C-33 #1039947 · Osmar@advremodel.com · 760-485-7076 · Schedules tentative — subject to AHJ, selections, long-lead delivery · "+APP_VERSION))
   );
 }
 ReactDOM.createRoot(document.getElementById("root")).render(h(Dashboard));
